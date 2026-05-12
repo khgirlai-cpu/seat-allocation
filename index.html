@@ -1,0 +1,1636 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>자율학습 좌석 배치 시스템</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg: #0F1117;
+  --surface: #1A1D27;
+  --surface2: #22263A;
+  --surface3: #2A2F47;
+  --border: #2E3350;
+  --border2: #3D4466;
+  --text: #E8EAF6;
+  --text2: #8B90B8;
+  --text3: #555A7A;
+  --accent: #5B6EF5;
+  --accent2: #7C8EFF;
+  --accent-l: rgba(91,110,245,0.12);
+  --green: #3DD68C;
+  --green-l: rgba(61,214,140,0.1);
+  --red: #FF5C7A;
+  --red-l: rgba(255,92,122,0.1);
+  --yellow: #FFB84D;
+  --yellow-l: rgba(255,184,77,0.1);
+  --purple: #B57BFF;
+  --purple-l: rgba(181,123,255,0.1);
+  --cyan: #3DD6D6;
+  --r: 14px; --rs: 8px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── 헤더 ── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-icon { width: 32px; height: 32px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.logo-text { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -.3px; }
+.logo-sub { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
+.header-right { display: flex; align-items: center; gap: 8px; }
+
+/* ── 탭 네비 ── */
+.tab-nav {
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tab-nav::-webkit-scrollbar { display: none; }
+.tnav-btn {
+  padding: 14px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text3);
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: all .15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tnav-btn.active { color: var(--accent2); border-bottom-color: var(--accent); }
+.tnav-btn:hover:not(.active) { color: var(--text2); }
+.tnav-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .5; }
+
+/* ── 레이아웃 ── */
+.main { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
+.pane { display: none; }
+.pane.active { display: block; }
+
+/* ── 카드 ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text3);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-title::before {
+  content: '';
+  width: 3px; height: 14px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+/* ── 버튼 ── */
+.btn {
+  padding: 10px 18px;
+  border-radius: var(--rs);
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-outline { background: transparent; border: 1px solid var(--border2); color: var(--text2); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent2); background: var(--accent-l); }
+.btn-green { background: var(--green); color: #0F1117; }
+.btn-green:hover { opacity: .9; }
+.btn-lg { padding: 13px 28px; font-size: 15px; border-radius: var(--r); }
+
+/* ── 입력 ── */
+input[type=text], input[type=number], select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s;
+  width: 100%;
+}
+input:focus, select:focus { border-color: var(--accent); }
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6' fill='%238B90B8'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+/* ── 드롭존 ── */
+.drop-zone {
+  border: 2px dashed var(--border2);
+  border-radius: var(--r);
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+}
+.drop-zone:hover, .drop-zone.over {
+  border-color: var(--accent);
+  background: var(--accent-l);
+}
+.drop-zone input { display: none; }
+.drop-icon { font-size: 36px; margin-bottom: 10px; }
+.drop-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.drop-sub { font-size: 12px; color: var(--text3); }
+
+/* ── 공간 설정 카드 ── */
+.space-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.space-item {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  padding: 12px 14px;
+}
+.space-item-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+.space-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
+.badge-a { background: var(--accent-l); color: var(--accent2); }
+.badge-b { background: var(--purple-l); color: var(--purple); }
+
+/* ── 힌트 박스 ── */
+.hint { background: var(--yellow-l); border: 1px solid rgba(255,184,77,.2); border-radius: var(--rs); padding: 12px 14px; font-size: 12px; color: var(--yellow); line-height: 1.7; margin-bottom: 14px; }
+.hint strong { font-weight: 700; }
+.hint-blue { background: var(--accent-l); border-color: rgba(91,110,245,.2); color: var(--accent2); }
+
+/* ── 미리보기 테이블 ── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { background: var(--surface2); color: var(--text3); font-weight: 600; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; }
+td { padding: 9px 10px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--surface2); }
+
+/* ── 태그 ── */
+.tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 20px; margin: 1px; }
+.tag-1 { background: var(--green-l); color: var(--green); }
+.tag-2 { background: var(--yellow-l); color: var(--yellow); }
+.tag-3 { background: var(--red-l); color: var(--red); }
+.tag-a { background: var(--accent-l); color: var(--accent2); }
+.tag-b { background: var(--purple-l); color: var(--purple); }
+.tag-ok { background: var(--green-l); color: var(--green); }
+.tag-fail { background: var(--red-l); color: var(--red); }
+.cnt-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; border-radius: 11px; font-size: 11px; font-weight: 700; background: var(--accent); color: #fff; padding: 0 6px; margin-left: 6px; }
+
+/* ── 대시보드 ── */
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.dash-stat {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+}
+.dash-stat-n { font-size: 28px; font-weight: 900; font-family: 'DM Mono', monospace; color: var(--text); }
+.dash-stat-l { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.dash-stat-sub { font-size: 12px; color: var(--text2); margin-top: 6px; }
+
+/* ── 학습실 결과 카드 ── */
+.room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.room-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.room-header {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.room-name { font-size: 15px; font-weight: 700; }
+.room-meta { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.room-cap-bar { margin: 14px 16px 12px; }
+.room-cap-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text3); margin-bottom: 6px; }
+.bar-track { background: var(--surface3); border-radius: 4px; height: 6px; }
+.bar-fill { height: 100%; border-radius: 4px; transition: width .5s ease; }
+.room-body { max-height: 280px; overflow-y: auto; }
+.room-body::-webkit-scrollbar { width: 4px; }
+.room-body::-webkit-scrollbar-track { background: transparent; }
+.room-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.room-row { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.room-row:last-child { border-bottom: none; }
+.room-rank { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); min-width: 20px; }
+
+/* ── 미배정 ── */
+.unassigned-card {
+  background: var(--red-l);
+  border: 1px solid rgba(255,92,122,.2);
+  border-radius: var(--r);
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+.unassigned-title { font-size: 13px; font-weight: 700; color: var(--red); margin-bottom: 10px; }
+
+/* ── 학년별 분포 바 차트 ── */
+.grade-chart { display: flex; gap: 12px; align-items: flex-end; height: 100px; margin: 12px 0; }
+.grade-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.grade-bar { width: 100%; border-radius: 4px 4px 0 0; transition: height .5s ease; min-height: 2px; }
+.grade-bar-label { font-size: 11px; color: var(--text3); }
+.grade-bar-val { font-size: 12px; font-weight: 700; color: var(--text); font-family: 'DM Mono', monospace; }
+
+/* ── 상태 표시 ── */
+.status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+.dot-green { background: var(--green); }
+.dot-yellow { background: var(--yellow); }
+.dot-red { background: var(--red); }
+
+/* ── 스크롤바 ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── 반응형 ── */
+@media(max-width: 640px) {
+  .header { padding: 0 14px; }
+  .main { padding: 16px 14px; }
+  .tab-nav { padding: 0 14px; }
+  .room-grid { grid-template-columns: 1fr; }
+  .dash-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.sep { height: 1px; background: var(--border); margin: 20px 0; }
+.empty-state { text-align: center; padding: 40px; color: var(--text3); font-size: 13px; }
+.empty-icon { font-size: 36px; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">
+    <div class="logo-icon">📚</div>
+    <div>
+      <div class="logo-text">자율학습 배치 시스템</div>
+      <div class="logo-sub">AUTO SEAT ALLOCATION</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-outline" onclick="resetAll()">초기화</button>
+    <button class="btn btn-green" onclick="runAlloc()" id="run-btn">⚡ 배치 실행</button>
+  </div>
+</header>
+
+<nav class="tab-nav">
+  <button class="tnav-btn active" onclick="goTab(0)" id="tn0"><span class="tnav-dot"></span>학습 공간 설정</button>
+  <button class="tnav-btn" onclick="goTab(1)" id="tn1"><span class="tnav-dot"></span>학생 명단 입력</button>
+  <button class="tnav-btn" onclick="goTab(2)" id="tn2"><span class="tnav-dot"></span>배치 결과</button>
+  <button class="tnav-btn" onclick="goTab(3)" id="tn3"><span class="tnav-dot"></span>대시보드</button>
+</nav>
+
+<main class="main">
+
+<!-- ══ TAB 0: 공간 설정 ══ -->
+<div class="pane active" id="tab0">
+  <div class="card">
+    <div class="card-title">A그룹 — 기본 학습실 (전학년)</div>
+    <div class="space-grid" id="a-spaces"></div>
+    <button class="btn btn-outline" style="margin-top:10px;font-size:12px;" onclick="addSpace('A')">+ 학습실 추가</button>
+  </div>
+  <div class="card">
+    <div class="card-title">B그룹 — 예비 학습실 (1·2학년 전용)</div>
+    <div class="hint">A그룹(양현재·스터디카페·입시상담실) <strong>전체 만석</strong> 후 배정됩니다.<br>
+      조건: <strong>1·2학년</strong> + <strong>오후 타임만 신청</strong>한 학생 (야간1·야간2 포함 시 배정 불가)<br>
+      ※ 입시상담실은 <strong>3학년만</strong> 배정 가능 / 각 20석 고정</div>
+    <div class="space-grid" id="b-spaces"></div>
+    <button class="btn btn-outline" style="margin-top:10px;font-size:12px;" onclick="addSpace('B')">+ 학습실 추가</button>
+  </div>
+  <div class="card" style="background:var(--accent-l);border-color:rgba(91,110,245,.2);">
+    <div style="font-size:13px;color:var(--accent2);line-height:1.8;">
+      <strong>배치 우선순위 요약</strong><br>
+      1️⃣ <strong>선호 교실</strong>에 자리 있으면 선호 교실 우선 배정<br>
+      2️⃣ 선호 교실 만석 → <strong>양현재 우선</strong> (스터디카페 희망이라도 양현재 빈 자리 있으면 양현재)<br>
+      3️⃣ 양현재 만석 → <strong>스터디카페</strong> 잔여 배정<br>
+      4️⃣ 스터디카페도 만석 → <strong>입시상담실 (3학년만)</strong><br>
+      5️⃣ A그룹 전체 만석 → <strong>1·2학년 + 오후만 신청</strong>한 학생만 B그룹(꿈담터·문향전)<br>
+      ⚠️ 입시상담실은 3학년만 배정 가능
+    </div>
+  </div>
+  <button class="btn btn-primary btn-lg" onclick="goTab(1)" style="width:100%;">다음 — 학생 명단 입력 →</button>
+</div>
+
+<!-- ══ TAB 1: 명단 입력 ══ -->
+<div class="pane" id="tab1">
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+    <button class="btn btn-primary" id="im-upload" onclick="switchInput('upload')">📊 엑셀 업로드</button>
+    <button class="btn btn-outline" id="im-manual" onclick="switchInput('manual')">✏️ 직접 입력</button>
+    <button class="btn btn-outline" id="im-sample" onclick="switchInput('sample')">🧪 샘플 데이터</button>
+  </div>
+
+  <!-- 업로드 -->
+  <div id="inp-upload">
+    <div class="hint">
+      <strong>엑셀 형식 (헤더 자동 인식):</strong><br>
+      <strong>필수 열:</strong> 이름 | 학년 | 선호장소(또는 선호교실) | 총 신청 타임수<br>
+      <strong>슬롯 열(선택):</strong> 월오후, 월야간1, 월야간2, 화오후 … 금야간2 (O 표시)<br>
+      <strong>학번 열</strong>도 자동 인식합니다. 열 순서가 달라도 헤더명으로 자동 감지해요.
+    </div>
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-inp').click()">
+      <input type="file" id="file-inp" accept=".csv,.xlsx,.xls" onchange="handleFile(this.files[0])">
+      <div class="drop-icon">📂</div>
+      <div class="drop-title">엑셀 / CSV 파일 선택</div>
+      <div class="drop-sub">클릭하거나 드래그하세요 · .xlsx .csv 지원</div>
+    </div>
+    <div id="upload-preview"></div>
+  </div>
+
+  <!-- 직접 입력 -->
+  <div id="inp-manual" style="display:none;">
+    <div class="card">
+      <div class="card-title">학생 명단 <span id="manual-cnt" class="cnt-badge">0</span></div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>이름</th><th>학년</th><th>선호 교실</th><th>신청 타임 수</th><th></th></tr></thead>
+          <tbody id="manual-tbody"></tbody>
+        </table>
+      </div>
+      <button class="btn btn-outline" style="margin-top:10px;font-size:12px;" onclick="addManualRow()">+ 학생 추가</button>
+    </div>
+  </div>
+
+  <!-- 샘플 -->
+  <div id="inp-sample" style="display:none;">
+    <div class="card">
+      <div class="card-title">샘플 데이터 — 학생 20명</div>
+      <div class="hint hint-blue">다양한 학년·선호교실·타임수 조합으로 배치 로직을 바로 테스트할 수 있어요.</div>
+      <div class="table-wrap">
+        <table id="sample-table">
+          <thead><tr><th>#</th><th>이름</th><th>학년</th><th>선호 교실</th><th>신청 타임</th></tr></thead>
+          <tbody id="sample-tbody"></tbody>
+        </table>
+      </div>
+      <button class="btn btn-green btn-lg" style="margin-top:14px;width:100%;" onclick="loadSample()">이 명단으로 배치 실행 →</button>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-top:16px;">
+    <button class="btn btn-outline" onclick="goTab(0)" style="flex:1;">← 이전</button>
+    <button class="btn btn-primary" onclick="tryRun()" style="flex:2;justify-content:center;">배치 실행 →</button>
+  </div>
+</div>
+
+<!-- ══ TAB 2: 결과 ══ -->
+<div class="pane" id="tab2">
+  <div id="result-area">
+    <div class="empty-state">
+      <div class="empty-icon">⚙️</div>
+      <div>학생 명단을 입력하고 배치를 실행해주세요.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB 3: 대시보드 ══ -->
+<div class="pane" id="tab3">
+  <div id="dashboard-area">
+    <div class="empty-state">
+      <div class="empty-icon">📊</div>
+      <div>배치를 실행하면 대시보드가 생성됩니다.</div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+/* ══════════════════════════════
+   데이터
+══════════════════════════════ */
+let spaces = [
+  {id:1, name:'양현재', cap:85, group:'A'},
+  {id:2, name:'스터디카페', cap:30, group:'A'},
+  {id:3, name:'입시상담실', cap:20, group:'A'},
+  {id:4, name:'꿈담터', cap:20, group:'B'},
+  {id:5, name:'문향전', cap:20, group:'B'},
+];
+let spaceSid = 6;
+let students = [];
+let manSid = 0;
+let lastResult = null;
+
+const SAMPLE = [
+  {name:'김민준',grade:3,pref:'양현재',times:15},
+  {name:'이서연',grade:2,pref:'양현재',times:12},
+  {name:'박지호',grade:1,pref:'스터디카페',times:10},
+  {name:'최수아',grade:3,pref:'양현재',times:9},
+  {name:'정도윤',grade:2,pref:'꿈담터',times:8},
+  {name:'한예린',grade:1,pref:'양현재',times:15},
+  {name:'오승현',grade:3,pref:'스터디카페',times:6},
+  {name:'임나은',grade:2,pref:'문향전',times:11},
+  {name:'윤재원',grade:1,pref:'양현재',times:13},
+  {name:'강하은',grade:3,pref:'입시상담실',times:7},
+  {name:'송민서',grade:2,pref:'양현재',times:14},
+  {name:'류준혁',grade:1,pref:'스터디카페',times:5},
+  {name:'조예진',grade:3,pref:'양현재',times:10},
+  {name:'황태양',grade:2,pref:'꿈담터',times:9},
+  {name:'백지수',grade:1,pref:'입시상담실',times:12},
+  {name:'신동현',grade:3,pref:'스터디카페',times:4},
+  {name:'고나리',grade:2,pref:'양현재',times:8},
+  {name:'문소희',grade:1,pref:'문향전',times:6},
+  {name:'장우진',grade:3,pref:'양현재',times:11},
+  {name:'노은비',grade:2,pref:'스터디카페',times:13},
+];
+
+/* ══════════════════════════════
+   탭 / 입력 모드
+══════════════════════════════ */
+function goTab(n) {
+  document.querySelectorAll('.pane').forEach((p,i) => p.className = 'pane' + (i===n?' active':''));
+  document.querySelectorAll('.tnav-btn').forEach((b,i) => b.className = 'tnav-btn' + (i===n?' active':''));
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function switchInput(m) {
+  ['upload','manual','sample'].forEach(t => {
+    document.getElementById('inp-'+t).style.display = t===m?'':'none';
+    document.getElementById('im-'+t).className = 'btn ' + (t===m?'btn-primary':'btn-outline');
+  });
+  if(m==='sample') renderSampleTable();
+}
+
+/* ══════════════════════════════
+   공간 설정
+══════════════════════════════ */
+function renderSpaces() {
+  ['A','B'].forEach(g => {
+    document.getElementById(g.toLowerCase()+'-spaces').innerHTML = spaces.filter(s=>s.group===g).map(s=>`
+      <div class="space-item">
+        <div class="space-item-name">
+          <span>${s.name}</span>
+          <span class="space-badge badge-${g.toLowerCase()}">${g}그룹</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:11px;color:var(--text3);white-space:nowrap;">정원</span>
+          <input type="number" value="${s.cap}" min="1" style="width:70px;" oninput="spaces.find(x=>x.id===${s.id}).cap=+this.value">
+          <button style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px;" onclick="removeSpace(${s.id})">×</button>
+        </div>
+        <div style="margin-top:8px;">
+          <input type="text" value="${s.name}" style="font-size:12px;padding:5px 8px;" oninput="spaces.find(x=>x.id===${s.id}).name=this.value">
+        </div>
+      </div>`).join('');
+  });
+}
+function addSpace(g) {
+  spaces.push({id:spaceSid++, name:`학습실${spaceSid-1}`, cap:20, group:g});
+  renderSpaces();
+}
+function removeSpace(id) {
+  spaces = spaces.filter(s=>s.id!==id);
+  renderSpaces();
+}
+
+/* ══════════════════════════════
+   직접 입력
+══════════════════════════════ */
+function addManualRow(name='',grade=1,pref='',times=1) {
+  const id = manSid++;
+  const spaceOpts = spaces.map(s=>`<option value="${s.name}" ${pref===s.name?'selected':''}>${s.name}</option>`).join('');
+  const tr = document.createElement('tr');
+  tr.id = 'mr-'+id;
+  tr.innerHTML = `
+    <td><input type="text" placeholder="이름" value="${name}" style="width:80px;" oninput="updMan(${id},'name',this.value)"></td>
+    <td><select style="width:60px;padding:5px 22px 5px 6px;font-size:12px;" onchange="updMan(${id},'grade',+this.value)">
+      <option value="1" ${grade==1?'selected':''}>1학년</option>
+      <option value="2" ${grade==2?'selected':''}>2학년</option>
+      <option value="3" ${grade==3?'selected':''}>3학년</option>
+    </select></td>
+    <td><select style="width:110px;font-size:12px;padding:5px 22px 5px 6px;" onchange="updMan(${id},'pref',this.value)">${spaceOpts}</select></td>
+    <td><input type="number" value="${times}" min="1" max="15" style="width:60px;" oninput="updMan(${id},'times',+this.value)"></td>
+    <td><button style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;" onclick="rmMan(${id})">×</button></td>`;
+  document.getElementById('manual-tbody').appendChild(tr);
+  students.push({id,name,grade,pref:pref||spaces[0]?.name||'',times,src:'manual'});
+  updateManCnt();
+}
+function updMan(id,k,v){const s=students.find(x=>x.id===id);if(s)s[k]=v;updateManCnt();}
+function rmMan(id){document.getElementById('mr-'+id)?.remove();students=students.filter(s=>!(s.id===id&&s.src==='manual'));updateManCnt();}
+function updateManCnt(){
+  const v=students.filter(s=>s.src==='manual'&&s.name.trim());
+  document.getElementById('manual-cnt').textContent=v.length;
+}
+
+/* ══════════════════════════════
+   샘플
+══════════════════════════════ */
+function renderSampleTable() {
+  document.getElementById('sample-tbody').innerHTML = SAMPLE.map((s,i)=>`
+    <tr>
+      <td style="font-family:'DM Mono',monospace;color:var(--text3)">${i+1}</td>
+      <td style="font-weight:600">${s.name}</td>
+      <td><span class="tag tag-${s.grade}">${s.grade}학년</span></td>
+      <td><span style="font-size:12px;color:var(--text2)">${s.pref}</span></td>
+      <td><span style="font-family:'DM Mono',monospace;font-weight:700;color:var(--accent2)">${s.times}</span>타임</td>
+    </tr>`).join('');
+}
+function loadSample() {
+  students = students.filter(s=>s.src!=='sample');
+  SAMPLE.forEach((s,i)=>students.push({...s,id:manSid++,src:'sample'}));
+  runAlloc();
+}
+
+/* ══════════════════════════════
+   파일 업로드
+══════════════════════════════ */
+function handleFile(file) {
+  if(!file)return;
+  const r = new FileReader();
+  if(file.name.toLowerCase().endsWith('.csv')){r.onload=e=>parseCSV(e.target.result);r.readAsText(file,'UTF-8');}
+  else{r.onload=e=>{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});parseCSV(XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]));};r.readAsArrayBuffer(file);}
+}
+function parseCSV(text) {
+  students = students.filter(s=>s.src!=='excel');
+  const lines = text.trim().split('\n').filter(l=>l.trim());
+  if(lines.length < 2) return;
+
+  // 헤더 파싱으로 열 위치 자동 감지
+  const header = lines[0].split(',').map(c=>c.trim().replace(/^"|"$/g,'').toLowerCase());
+  const ci = (keywords) => {
+    for(const kw of keywords) {
+      const idx = header.findIndex(h=>h.includes(kw));
+      if(idx>=0) return idx;
+    }
+    return -1;
+  };
+
+  const iName   = ci(['이름','name']);
+  const iGrade  = ci(['학년','grade']);
+  const iPref   = ci(['선호장소','선호교실','선호','pref']);
+  const iTimes  = ci(['총 신청','총신청','타임수','times','total']);
+  const iId     = ci(['학번','id','번호']);
+
+  // 슬롯 열: 헤더에서 요일+타임 패턴 찾기 (E~S열, 인덱스 4~18)
+  const SLOT_DAYS = ['월','화','수','목','금'];
+  const SLOT_TIMES = ['오후','야간1','야간2','저녁1','저녁2','1','2','3'];
+  const slotCols = []; // {idx, slotName}
+  header.forEach((h,idx)=>{
+    const day = SLOT_DAYS.find(d=>h.includes(d));
+    const time = SLOT_TIMES.find(t=>h.includes(t));
+    if(day && time) slotCols.push({idx, slotName: day+'-'+time});
+  });
+
+  lines.slice(1).forEach((line,i)=>{
+    const cols = line.split(',').map(c=>c.trim().replace(/^"|"$/g,''));
+    if(cols.length < 2) return;
+
+    const name  = iName>=0  ? cols[iName]  : cols[1] || '';
+    const gradeRaw = iGrade>=0 ? cols[iGrade] : cols[2] || '1';
+    const grade = parseInt(gradeRaw.replace(/[^0-9]/g,'')) || 1;
+    const pref  = iPref>=0  ? cols[iPref]  : cols[3] || '';
+    let times   = iTimes>=0 ? parseInt(cols[iTimes])||0 : 0;
+
+    // 이름 없거나 너무 길면 스킵
+    if(!name || name.length > 15) return;
+
+    // 슬롯 목록 파싱
+    const slots = [];
+    slotCols.forEach(({idx, slotName})=>{
+      const v = (cols[idx]||'').toLowerCase().trim();
+      if(['o','○','◯','y','1','true','참','v','✓'].includes(v)) slots.push(slotName);
+    });
+
+    // 타임수: T열 있으면 사용, 없으면 슬롯 수로 계산
+    if(!times) times = slots.length || parseInt(cols[cols.length-1])||1;
+
+    const studentId = iId>=0 ? cols[iId] : cols[0] || '';
+    students.push({id:manSid++, studentId, name, grade, pref, times, slots, src:'excel'});
+  });
+  renderUploadPreview();
+}
+function renderUploadPreview() {
+  const v = students.filter(s=>s.src==='excel');
+  document.getElementById('upload-preview').innerHTML = `
+    <div class="card" style="margin-top:14px;">
+      <div class="card-title">업로드된 명단 <span class="cnt-badge">${v.length}명</span></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>학번</th><th>이름</th><th>학년</th><th>선호교실</th><th>타임수</th></tr></thead>
+        <tbody>${v.map((s,i)=>`<tr>
+          <td style="font-family:'DM Mono',monospace;color:var(--text3)">${i+1}</td>
+          <td style="font-family:'DM Mono',monospace;color:var(--text3)">${s.studentId||'-'}</td>
+          <td style="font-weight:600">${s.name}</td>
+          <td><span class="tag tag-${s.grade}">${s.grade}학년</span></td>
+          <td>${s.pref||'<span style="color:var(--text3)">미지정</span>'}</td>
+          <td><span style="font-family:'DM Mono',monospace;font-weight:700;color:var(--accent2)">${s.times}</span></td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+}
+
+/* ══════════════════════════════
+   핵심 배치 알고리즘
+══════════════════════════════ */
+/* ══════════════════════════════
+   헬퍼 함수
+══════════════════════════════ */
+function getUniqueDays(slots) {
+  if(!slots||slots.length===0) return 0;
+  return new Set(slots.map(s=>s.split('-')[0])).size;
+}
+function isAfternoonOnly(stu) {
+  if(stu.slots&&stu.slots.length>0) return stu.slots.every(sl=>sl.includes('오후'));
+  return false;
+}
+function slotsOverlap(a, b) {
+  if(!a||!a.length||!b||!b.length) return false;
+  return a.some(s=>b.includes(s));
+}
+
+/* ══════════════════════════════
+   양현재 배치 (85석)
+   ─ zoneA: 1~39번  (39석) 고3 우선
+   ─ zoneB: 40~77번 (38석)
+   ─ zoneC: 80~85번 (6석)  ← 기존 누락 구역
+   ─ special: 78·79번 (2석) 1·2학년 전용
+   ─ 기본 1인 1석. 자리 부족 시에만 슬롯 안 겹치면 쉐어
+   ─ 3학년은 쉐어 불가 (단독 1석)
+══════════════════════════════ */
+function allocYanghyunjae(candidates, sorted) {
+  // 자리 풀 생성 (seatNum, occupants)
+  const seatsA = Array.from({length:39}, (_,i)=>({seatNum:i+1,      occupants:[]}));
+  const seatsB = Array.from({length:38}, (_,i)=>({seatNum:40+i,     occupants:[]}));
+  const seatsC = Array.from({length:6},  (_,i)=>({seatNum:80+i,     occupants:[]}));
+  const seatsS = Array.from({length:2},  (_,i)=>({seatNum:78+i,     occupants:[]})); // 78,79번
+
+  const assigned = new Set();
+
+  // 해당 자리에 앉을 수 있는지 판단
+  function canSit(seat, stu) {
+    if(seat.occupants.length===0) return true;          // 빈 자리
+    if(stu.grade===3) return false;                      // 3학년 단독
+    if(seat.occupants.some(o=>o.grade===3)) return false;// 고3 있으면 불가
+    const hasSlots = stu.slots&&stu.slots.length>0;
+    const othersHaveSlots = seat.occupants.every(o=>o.slots&&o.slots.length>0);
+    if(!hasSlots||!othersHaveSlots) return false;        // 슬롯 정보 없으면 불가
+    const taken = seat.occupants.flatMap(o=>o.slots);
+    return !slotsOverlap(taken, stu.slots);              // 슬롯 겹치면 불가
+  }
+
+  function tryPlace(seatList, stu, zone) {
+    for(const seat of seatList) {
+      if(canSit(seat, stu)) {
+        const obj = {...stu, seatZone:zone, seatNum:seat.seatNum};
+        seat.occupants.push(obj);
+        assigned.add(stu.id);
+        return obj;
+      }
+    }
+    return null;
+  }
+
+  // 1) 고3 → zoneA 우선, 넘치면 zoneB → zoneC
+  for(const stu of sorted) {
+    if(!candidates.has(stu.id)||stu.grade!==3) continue;
+    if(!tryPlace(seatsA,stu,'A')) if(!tryPlace(seatsB,stu,'B')) tryPlace(seatsC,stu,'C');
+  }
+  // 2) 1·2학년 → special(78·79) 먼저
+  for(const stu of sorted) {
+    if(!candidates.has(stu.id)||assigned.has(stu.id)||stu.grade>2) continue;
+    tryPlace(seatsS, stu, 'special');
+  }
+  // 3) 1·2학년 → zoneA → zoneB → zoneC
+  for(const stu of sorted) {
+    if(!candidates.has(stu.id)||assigned.has(stu.id)||stu.grade>2) continue;
+    if(!tryPlace(seatsA,stu,'A')) if(!tryPlace(seatsB,stu,'B')) tryPlace(seatsC,stu,'C');
+  }
+
+  const zoneA   = seatsA.flatMap(s=>s.occupants);
+  const zoneB   = seatsB.flatMap(s=>s.occupants);
+  const zoneC   = seatsC.flatMap(s=>s.occupants);
+  const special = seatsS.flatMap(s=>s.occupants);
+
+  return { zoneA, zoneB, zoneC, special, assigned,
+           all:[...zoneA,...zoneB,...zoneC,...special],
+           seatsA, seatsB, seatsC, seatsS };
+}
+
+/* ══════════════════════════════
+   스터디카페 배치 (30석)
+   ─ 1~8번  (실제 16석): 고정 1인 1석
+   ─ 9~15번 (7자리):     쉐어 가능 (슬롯 안 겹치면), 3학년 단독
+   ─ 16~20번(5석):       일반 1인 1석
+   ─ 21~25번(5석):       1~2일 신청자 전용
+   ─ 26~30번(5석):       나머지
+══════════════════════════════ */
+function allocStudyCafe(candidates, sorted) {
+  // 고정 1~8번: PDF에서 1,3,5,7이 각 2자리 → 실제 16석
+  // seatNum: 1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8
+  const fixedSeats    = Array.from({length:16}, (_,i)=>({seatNum:Math.floor(i/2)+1, occupants:[]}));
+  const shareSeats    = Array.from({length:7},  (_,i)=>({seatNum:9+i,  occupants:[]}));
+  const generalSeats  = Array.from({length:5},  (_,i)=>({seatNum:16+i, occupants:[]}));
+  const shortDaySeats = Array.from({length:5},  (_,i)=>({seatNum:21+i, occupants:[]}));
+  const overflowSeats = Array.from({length:5},  (_,i)=>({seatNum:26+i, occupants:[]}));
+
+  const assigned = new Set();
+
+  function canShare(seat, stu) {
+    if(seat.occupants.length===0) return true;
+    if(stu.grade===3) return false;
+    if(seat.occupants.some(o=>o.grade===3)) return false;
+    if(!(stu.slots&&stu.slots.length>0)) return false;
+    if(seat.occupants.some(o=>!(o.slots&&o.slots.length>0))) return false;
+    return !slotsOverlap(seat.occupants.flatMap(o=>o.slots), stu.slots);
+  }
+
+  function placeEmpty(seatList, zone, stu) {
+    for(const seat of seatList) {
+      if(seat.occupants.length===0) {
+        const obj = {...stu, seatZone:zone, seatNum:seat.seatNum};
+        seat.occupants.push(obj);
+        assigned.add(stu.id);
+        return obj;
+      }
+    }
+    return null;
+  }
+
+  function placeShare(seatList, zone, stu) {
+    for(const seat of seatList) {
+      if(canShare(seat, stu)) {
+        const obj = {...stu, seatZone:zone, seatNum:seat.seatNum};
+        seat.occupants.push(obj);
+        assigned.add(stu.id);
+        return obj;
+      }
+    }
+    return null;
+  }
+
+  // 1) 고정 1~8 (16석): 빈 자리에 순서대로
+  for(const stu of sorted) {
+    if(!candidates.has(stu.id)) continue;
+    placeEmpty(fixedSeats, 'fixed', stu);
+  }
+  // 2) 9~15 쉐어: 빈 자리 우선, 없으면 슬롯 안 겹치는 자리
+  for(const stu of sorted) {
+    if(!candidates.has(stu.id)||assigned.has(stu.id)) continue;
+    placeShare(shareSeats, 'share', stu);
+  }
+  // 3) 21~25: 요일 1~2일 신청자
+  for(const stu of sorted) {
+    if(!candidates.has(stu.id)||assigned.has(stu.id)) continue;
+    const days = getUniqueDays(stu.slots);
+    const isShort = stu.slots&&stu.slots.length>0 ? days<=2 : stu.times<=2;
+    if(!isShort) continue;
+    placeEmpty(shortDaySeats, 'shortday', stu);
+  }
+  // 4) 16~20: 일반
+  for(const stu of sorted) {
+    if(!candidates.has(stu.id)||assigned.has(stu.id)) continue;
+    placeEmpty(generalSeats, 'general', stu);
+  }
+  // 5) 26~30: 나머지
+  for(const stu of sorted) {
+    if(!candidates.has(stu.id)||assigned.has(stu.id)) continue;
+    placeEmpty(overflowSeats, 'overflow', stu);
+  }
+
+  const fixed    = fixedSeats.flatMap(s=>s.occupants);
+  const share    = shareSeats.flatMap(s=>s.occupants);
+  const general  = generalSeats.flatMap(s=>s.occupants);
+  const shortDay = shortDaySeats.flatMap(s=>s.occupants);
+  const overflow = overflowSeats.flatMap(s=>s.occupants);
+
+  return { fixed, share, general, shortDay, overflow,
+           shareSeats, fixedSeats, generalSeats, shortDaySeats, overflowSeats,
+           all:[...fixed,...share,...general,...shortDay,...overflow], assigned };
+}
+
+/* ══════════════════════════════
+   메인 배치 함수
+══════════════════════════════ */
+function runAlloc() {
+  const valid = students.filter(s=>s.name.trim());
+  if(!valid.length){alert('학생 명단을 먼저 입력해주세요.');return;}
+
+  const nameToId = {};
+  spaces.forEach(s=>nameToId[s.name.trim()]=s.id);
+
+  const yhId = spaces.find(s=>s.name==='양현재')?.id;
+  const scId = spaces.find(s=>s.name==='스터디카페')?.id;
+  const isId = spaces.find(s=>s.name==='입시상담실')?.id;
+  const gdId = spaces.find(s=>s.name==='꿈담터')?.id;
+  const mhId = spaces.find(s=>s.name==='문향전')?.id;
+  const IS_CAP = spaces.find(s=>s.id===isId)?.cap||20;
+  const GD_CAP = spaces.find(s=>s.id===gdId)?.cap||20;
+  const MH_CAP = spaces.find(s=>s.id===mhId)?.cap||20;
+
+  // 타임 수 내림차순, 동일 시 학번 오름차순
+  const sorted = [...valid].sort((a,b)=>{
+    if(b.times!==a.times) return b.times-a.times;
+    return (a.studentId||'').localeCompare(b.studentId||'');
+  });
+
+  const globalAssigned = new Set();
+  const detail = { yanghyunjae:null, studycafe:null, ipsang:[], gdamter:[], munhyangjeon:[] };
+
+  /* ── 1단계: 선호 교실 배치 ── */
+  // 선호 교실이 양현재인 학생
+  const yhCand = new Set(sorted.filter(s=>s.pref==='양현재').map(s=>s.id));
+  // 선호 교실이 스터디카페인 학생
+  const scCand = new Set(sorted.filter(s=>s.pref==='스터디카페'||s.pref==='스터디 카페').map(s=>s.id));
+  // 선호 교실이 입시상담실인 학생 (3학년만 가능)
+  const isCand = new Set(sorted.filter(s=>(s.pref==='입시상담실')&&s.grade===3).map(s=>s.id));
+
+  // 양현재 선호 학생 배치
+  const yhResult = allocYanghyunjae(yhCand, sorted);
+  yhResult.assigned.forEach(id=>globalAssigned.add(id));
+  detail.yanghyunjae = yhResult;
+
+  // 스터디카페 선호 학생 배치
+  const scResult = allocStudyCafe(scCand, sorted);
+  scResult.assigned.forEach(id=>globalAssigned.add(id));
+  detail.studycafe = scResult;
+
+  // 입시상담실 선호 학생 배치 (3학년만)
+  for(const stu of sorted) {
+    if(!isCand.has(stu.id)||globalAssigned.has(stu.id)) continue;
+    if(detail.ipsang.length>=IS_CAP) break;
+    const obj = {...stu, seatNum:detail.ipsang.length+1};
+    detail.ipsang.push(obj);
+    globalAssigned.add(stu.id);
+  }
+
+  /* ── 헬퍼: 양현재·스터디카페·입시상담실 잔여에 학생 추가 배정 ── */
+  function addToYH(stu) {
+    function tryOn(seatList, zone) {
+      for(const seat of seatList) {
+        const can = seat.occupants.length===0 ? true : (() => {
+          if(stu.grade===3||seat.occupants.some(o=>o.grade===3)) return false;
+          if(!(stu.slots&&stu.slots.length>0)) return false;
+          if(seat.occupants.some(o=>!(o.slots&&o.slots.length>0))) return false;
+          return !slotsOverlap(seat.occupants.flatMap(o=>o.slots), stu.slots);
+        })();
+        if(can) {
+          const obj = {...stu, seatZone:zone, seatNum:seat.seatNum};
+          seat.occupants.push(obj);
+          globalAssigned.add(stu.id);
+          if(zone==='A') detail.yanghyunjae.zoneA.push(obj);
+          else if(zone==='B') detail.yanghyunjae.zoneB.push(obj);
+          else if(zone==='C') detail.yanghyunjae.zoneC.push(obj);
+          else detail.yanghyunjae.special.push(obj);
+          detail.yanghyunjae.all.push(obj);
+          return true;
+        }
+      }
+      return false;
+    }
+    if(stu.grade===3) {
+      return tryOn(yhResult.seatsA,'A')||tryOn(yhResult.seatsB,'B')||tryOn(yhResult.seatsC,'C');
+    } else {
+      return tryOn(yhResult.seatsS,'special')||tryOn(yhResult.seatsA,'A')||
+             tryOn(yhResult.seatsB,'B')||tryOn(yhResult.seatsC,'C');
+    }
+  }
+
+  function addToSC(stu) {
+    function tryOn(seatList, zone, shareMode) {
+      for(const seat of seatList) {
+        const can = shareMode
+          ? (seat.occupants.length===0||(() => {
+              if(stu.grade===3||seat.occupants.some(o=>o.grade===3)) return false;
+              if(!(stu.slots&&stu.slots.length>0)) return false;
+              if(seat.occupants.some(o=>!(o.slots&&o.slots.length>0))) return false;
+              return !slotsOverlap(seat.occupants.flatMap(o=>o.slots), stu.slots);
+            })())
+          : seat.occupants.length===0;
+        if(can) {
+          const obj = {...stu, seatZone:zone, seatNum:seat.seatNum};
+          seat.occupants.push(obj);
+          globalAssigned.add(stu.id);
+          detail.studycafe.all.push(obj);
+          if(zone==='fixed') detail.studycafe.fixed.push(obj);
+          else if(zone==='share') detail.studycafe.share.push(obj);
+          else if(zone==='shortday') detail.studycafe.shortDay.push(obj);
+          else if(zone==='overflow') detail.studycafe.overflow.push(obj);
+          else detail.studycafe.general.push(obj);
+          return true;
+        }
+      }
+      return false;
+    }
+    const days = getUniqueDays(stu.slots);
+    const isShort = stu.slots&&stu.slots.length>0 ? days<=2 : stu.times<=2;
+    return tryOn(scResult.fixedSeats,'fixed',false)||
+           tryOn(scResult.shareSeats,'share',true)||
+           (isShort&&tryOn(scResult.shortDaySeats,'shortday',false))||
+           tryOn(scResult.generalSeats,'general',false)||
+           tryOn(scResult.overflowSeats,'overflow',false);
+  }
+
+  function addToIS(stu) {
+    // 입시상담실은 3학년만
+    if(stu.grade!==3) return false;
+    if(detail.ipsang.length>=IS_CAP) return false;
+    const obj = {...stu, seatNum:detail.ipsang.length+1};
+    detail.ipsang.push(obj);
+    globalAssigned.add(stu.id);
+    return true;
+  }
+
+  /* ── 2단계: 미배정 → 양현재 우선 → 스터디카페 → 입시상담실(3학년만) ── */
+  // 규칙:
+  //   스터디카페 희망이더라도 양현재에 자리 있으면 양현재로
+  //   양현재 희망이더라도 스터디카페/입시상담실 자리 있으면 거기로
+  //   입시상담실은 3학년만 가능
+
+  for(const stu of sorted) {
+    if(globalAssigned.has(stu.id)) continue;
+    // 양현재 잔여 우선 (전학년)
+    if(addToYH(stu)) continue;
+    // 양현재 만석 → 스터디카페 잔여
+    if(addToSC(stu)) continue;
+    // 스터디카페도 만석 → 입시상담실 (3학년만)
+    addToIS(stu);
+  }
+
+  /* ── 3단계: B그룹 (꿈담터·문향전) — 오후만 신청한 1·2학년 ── */
+  for(const stu of sorted) {
+    if(globalAssigned.has(stu.id)) continue;
+    if(stu.grade>2||!isAfternoonOnly(stu)) continue;
+    if(detail.gdamter.length<GD_CAP) {
+      detail.gdamter.push({...stu, seatNum:detail.gdamter.length+1});
+      globalAssigned.add(stu.id);
+    } else if(detail.munhyangjeon.length<MH_CAP) {
+      detail.munhyangjeon.push({...stu, seatNum:detail.munhyangjeon.length+1});
+      globalAssigned.add(stu.id);
+    }
+  }
+
+  /* ── 최종 미배정 ── */
+  const unassigned = valid.filter(s=>!globalAssigned.has(s.id)).map(s=>{
+    let reason='A·B그룹 전체 만석';
+    if(s.grade===3) reason='A그룹 전체 만석 (3학년·B그룹 불가)';
+    else if(!isAfternoonOnly(s)) reason='A그룹 전체 만석 · 야간 포함으로 B그룹 불가';
+    return {...s, reason};
+  });
+
+  /* ── roomAssign 변환 (renderResult 호환) ── */
+  const roomAssign={};
+  spaces.forEach(s=>roomAssign[s.id]=[]);
+  if(yhId) roomAssign[yhId]=detail.yanghyunjae?.all||[];
+  if(scId) roomAssign[scId]=detail.studycafe?.all||[];
+  if(isId) roomAssign[isId]=detail.ipsang||[];
+  if(gdId) roomAssign[gdId]=detail.gdamter||[];
+  if(mhId) roomAssign[mhId]=detail.munhyangjeon||[];
+
+  lastResult = {roomAssign, unassigned, valid, total:valid.length, detail};
+  renderResult(lastResult);
+  renderDashboard(lastResult);
+  goTab(2);
+}
+
+function tryRun() {
+  const v = students.filter(s=>s.name.trim());
+  if(!v.length){alert('학생 명단을 입력해주세요.');return;}
+  runAlloc();
+}
+
+/* ══════════════════════════════
+   결과 렌더
+══════════════════════════════ */
+function barColor(pct) {
+  if(pct < 0.6) return 'var(--green)';
+  if(pct < 0.9) return 'var(--yellow)';
+  return 'var(--red)';
+}
+function gradeTag(g) { return `<span class="tag tag-${g}">${g}학년</span>`; }
+
+function renderResult({roomAssign, unassigned, valid, total, detail}) {
+  const assignedCnt = total - unassigned.length;
+  let html = `
+    <!-- 요약 -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:20px;">
+      <div class="dash-stat"><div class="dash-stat-n">${total}</div><div class="dash-stat-l">신청 학생</div></div>
+      <div class="dash-stat"><div class="dash-stat-n" style="color:var(--green)">${assignedCnt}</div><div class="dash-stat-l">배정 완료</div></div>
+      <div class="dash-stat"><div class="dash-stat-n" style="color:${unassigned.length>0?'var(--red)':'var(--green)'}">${unassigned.length}</div><div class="dash-stat-l">미배정</div></div>
+      <div class="dash-stat"><div class="dash-stat-n" style="color:var(--accent2)">${Math.round(assignedCnt/total*100)}%</div><div class="dash-stat-l">배정률</div></div>
+    </div>`;
+
+  // 학습실별 결과
+  html += `<div class="card-title" style="margin-bottom:12px;">학습실별 배정 현황</div>`;
+
+  // A그룹
+  html += `<div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.1em;margin-bottom:8px;text-transform:uppercase;">A그룹 — 기본 학습실</div>`;
+  html += `<div class="room-grid">`;
+  spaces.filter(s=>s.group==='A').forEach(sp=>{
+    const stus = roomAssign[sp.id]||[];
+    const pct = Math.min(stus.length/sp.cap, 1);
+    const isYH = sp.name==='양현재';
+    const isSC = sp.name==='스터디카페';
+
+    html += `<div class="room-card">
+      <div class="room-header">
+        <div>
+          <div class="room-name">${sp.name}</div>
+          <div class="room-meta">정원 ${sp.cap}석 · <span class="space-badge badge-a">A그룹</span></div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:20px;font-weight:900;font-family:'DM Mono',monospace;">${stus.length}</div>
+          <div style="font-size:11px;color:var(--text3)">/ ${sp.cap}석</div>
+        </div>
+      </div>
+      <div class="room-cap-bar">
+        <div class="room-cap-label">
+          <span><span class="status-dot ${pct<0.6?'dot-green':pct<0.9?'dot-yellow':'dot-red'}"></span>${Math.round(pct*100)}% 사용</span>
+          <span>잔여 ${Math.max(sp.cap-stus.length,0)}석</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.min(pct*100,100)}%;background:${barColor(pct)};"></div></div>
+      </div>`;
+
+    // 양현재: 구역별 표시
+    if(isYH && detail?.yanghyunjae) {
+      const yh = detail.yanghyunjae;
+      const zones = [
+        {label:'1~39번 구역 (고3 우선)', list: yh.zoneA, color:'var(--red)'},
+        {label:'40~77번 구역', list: yh.zoneB, color:'var(--accent2)'},
+        {label:'80~85번 구역', list: yh.zoneC||[], color:'var(--cyan,#3DD6D6)'},
+        {label:'78·79번 (1·2학년 전용)', list: yh.special, color:'var(--green)'},
+      ];
+      html += `<div class="room-body">`;
+      zones.forEach(z=>{
+        if(!z.list||z.list.length===0) return;
+        html += `<div style="padding:6px 16px 2px;font-size:10px;font-weight:700;color:${z.color};background:var(--surface2);border-bottom:1px solid var(--border);">${z.label} · ${z.list.length}명</div>`;
+        z.list.forEach((s,i)=>{
+          html += `<div class="room-row">
+            <span class="room-rank">${s.seatNum||String(i+1).padStart(2,'0')}</span>
+            ${s.studentId?`<span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);min-width:44px;">${s.studentId}</span>`:''}
+            <span style="font-weight:600;min-width:52px;">${s.name}</span>
+            ${gradeTag(s.grade)}
+            <span style="font-size:11px;color:var(--accent2);margin-left:auto;font-family:'DM Mono',monospace;">${s.times}T</span>
+            ${s.pref===sp.name?'<span style="font-size:10px;color:var(--green);font-weight:700;">✓선호</span>':'<span style="font-size:10px;color:var(--text3);">↪대체</span>'}
+          </div>`;
+        });
+      });
+      html += `</div>`;
+    }
+    // 스터디카페: 구역별 표시
+    else if(isSC && detail?.studycafe) {
+      const sc = detail.studycafe;
+      const scZones = [
+        {label:'1~8번 고정 자리 (16석)', list: sc.fixed, color:'var(--accent2)'},
+        {label:'9~15번 쉐어 자리', list: sc.share, color:'var(--cyan,#3DD6D6)'},
+        {label:'16~20번 일반', list: sc.general, color:'var(--text2)'},
+        {label:'21~25번 (1~2일 신청자)', list: sc.shortDay, color:'var(--yellow)'},
+        {label:'26~30번 (잔여)', list: sc.overflow, color:'var(--purple)'},
+      ];
+      html += `<div class="room-body">`;
+      scZones.forEach(z=>{
+        if(!z.list||z.list.length===0) return;
+        html += `<div style="padding:6px 16px 2px;font-size:10px;font-weight:700;color:${z.color};background:var(--surface2);border-bottom:1px solid var(--border);">${z.label} · ${z.list.length}명</div>`;
+        z.list.forEach((s,i)=>{
+          html += `<div class="room-row">
+            <span class="room-rank">${s.seatNum||String(i+1).padStart(2,'0')}</span>
+            ${s.studentId?`<span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);min-width:44px;">${s.studentId}</span>`:''}
+            <span style="font-weight:600;min-width:52px;">${s.name}</span>
+            ${gradeTag(s.grade)}
+            <span style="font-size:11px;color:var(--accent2);margin-left:auto;font-family:'DM Mono',monospace;">${s.times}T</span>
+            ${s.pref===sp.name?'<span style="font-size:10px;color:var(--green);font-weight:700;">✓선호</span>':'<span style="font-size:10px;color:var(--text3);">↪대체</span>'}
+          </div>`;
+        });
+      });
+      html += `</div>`;
+    }
+    // 일반 교실
+    else {
+      html += `<div class="room-body">
+        ${stus.length===0?'<div class="empty-state" style="padding:20px;font-size:12px;">배정 학생 없음</div>':
+          stus.map((s,i)=>`<div class="room-row">
+            <span class="room-rank">${s.seatNum||String(i+1).padStart(2,'0')}</span>
+            ${s.studentId?`<span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);min-width:44px;">${s.studentId}</span>`:''}
+            <span style="font-weight:600;min-width:52px;">${s.name}</span>
+            ${gradeTag(s.grade)}
+            <span style="font-size:11px;color:var(--accent2);margin-left:auto;font-family:'DM Mono',monospace;">${s.times}T</span>
+            ${s.pref===sp.name?'<span style="font-size:10px;color:var(--green);font-weight:700;">✓선호</span>':'<span style="font-size:10px;color:var(--text3);">↪대체</span>'}
+          </div>`).join('')}
+      </div>`;
+    }
+    html += `</div>`;
+  });
+  html += `</div>`;
+
+  // B그룹
+  html += `<div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.1em;margin:16px 0 8px;text-transform:uppercase;">B그룹 — 예비 학습실 (1·2학년 전용)</div>`;
+  html += `<div class="room-grid">`;
+  spaces.filter(s=>s.group==='B').forEach(sp=>{
+    const stus = roomAssign[sp.id]||[];
+    const pct = sp.cap>0?stus.length/sp.cap:0;
+    html += `<div class="room-card">
+      <div class="room-header">
+        <div>
+          <div class="room-name">${sp.name}</div>
+          <div class="room-meta">정원 ${sp.cap}석 · <span class="space-badge badge-b">B그룹</span></div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:20px;font-weight:900;font-family:'DM Mono',monospace;">${stus.length}</div>
+          <div style="font-size:11px;color:var(--text3)">/ ${sp.cap}석</div>
+        </div>
+      </div>
+      <div class="room-cap-bar">
+        <div class="room-cap-label">
+          <span><span class="status-dot ${pct<0.6?'dot-green':pct<0.9?'dot-yellow':'dot-red'}"></span>${Math.round(pct*100)}% 사용</span>
+          <span>잔여 ${sp.cap-stus.length}석</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.min(pct*100,100)}%;background:${barColor(pct)};"></div></div>
+      </div>
+      <div class="room-body">
+        ${stus.length===0?'<div class="empty-state" style="padding:20px;font-size:12px;">배정 학생 없음</div>':
+          stus.map((s,i)=>`<div class="room-row">
+            <span class="room-rank">${String(i+1).padStart(2,'0')}</span>
+            ${s.studentId?`<span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);min-width:44px;">${s.studentId}</span>`:''}
+            <span style="font-weight:600;min-width:52px;">${s.name}</span>
+            ${gradeTag(s.grade)}
+            <span style="font-size:11px;color:var(--accent2);margin-left:auto;font-family:'DM Mono',monospace;">${s.times}T</span>
+            ${s.pref===sp.name
+              ? '<span style="font-size:10px;color:var(--green);font-weight:700;">✓선호</span>'
+              : '<span style="font-size:10px;color:var(--text3);">↪대체</span>'}
+          </div>`).join('')}
+      </div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  // 미배정
+  if(unassigned.length>0) {
+    html += `<div class="unassigned-card">
+      <div class="unassigned-title">⚠️ 미배정 학생 ${unassigned.length}명</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>학번</th><th>이름</th><th>학년</th><th>선호교실</th><th>타임수</th><th>미배정 사유</th></tr></thead>
+        <tbody>${unassigned.map(s=>`<tr>
+          <td style="font-family:'DM Mono',monospace;color:var(--text3);font-size:11px;">${s.studentId||'-'}</td>
+          <td style="font-weight:600">${s.name}</td>
+          <td>${gradeTag(s.grade)}</td>
+          <td style="color:var(--text2)">${s.pref}</td>
+          <td style="font-family:'DM Mono',monospace;color:var(--accent2)">${s.times}</td>
+          <td><span class="tag tag-fail" style="white-space:nowrap;">${s.reason||'자리 부족'}</span></td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+  } else {
+    html += `<div style="background:var(--green-l);border:1px solid rgba(61,214,140,.2);border-radius:var(--r);padding:16px;text-align:center;font-size:15px;font-weight:700;color:var(--green);">🎉 전원 배정 완료!</div>`;
+  }
+
+  // 내보내기
+  html += `<div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
+    <button class="btn btn-outline" onclick="exportResult()">📊 엑셀로 저장</button>
+    <button class="btn btn-outline" onclick="goTab(3)">📈 대시보드 보기</button>
+  </div>`;
+
+  document.getElementById('result-area').innerHTML = html;
+}
+
+/* ══════════════════════════════
+   대시보드
+══════════════════════════════ */
+function renderDashboard({roomAssign, unassigned, valid, total}) {
+  const assignedCnt = total - unassigned.length;
+  const grades = [1,2,3];
+
+  // 학년별 집계
+  const gradeCount = {1:0,2:0,3:0};
+  const gradeAssigned = {1:0,2:0,3:0};
+  valid.forEach(s=>gradeCount[s.grade]=(gradeCount[s.grade]||0)+1);
+  valid.filter(s=>!unassigned.find(u=>u.id===s.id)).forEach(s=>gradeAssigned[s.grade]=(gradeAssigned[s.grade]||0)+1);
+
+  // 선호교실 적중률
+  let prefHit=0;
+  spaces.forEach(sp=>{
+    (roomAssign[sp.id]||[]).forEach(s=>{ if(s.pref===sp.name)prefHit++; });
+  });
+  const prefRate = total>0?Math.round(prefHit/total*100):0;
+
+  // 총 정원
+  const totalCap = spaces.reduce((a,s)=>a+s.cap,0);
+  const aCap = spaces.filter(s=>s.group==='A').reduce((a,s)=>a+s.cap,0);
+
+  const maxGrade = Math.max(...grades.map(g=>gradeCount[g]||0))||1;
+  const gradeColors = {1:'var(--green)',2:'var(--yellow)',3:'var(--red)'};
+
+  let html = `
+    <!-- 통계 카드 -->
+    <div class="dash-grid">
+      <div class="dash-stat">
+        <div class="dash-stat-n">${total}</div>
+        <div class="dash-stat-l">전체 신청 학생</div>
+      </div>
+      <div class="dash-stat">
+        <div class="dash-stat-n" style="color:var(--green)">${assignedCnt}</div>
+        <div class="dash-stat-l">배정 완료</div>
+        <div class="dash-stat-sub">${Math.round(assignedCnt/total*100)}% 배정률</div>
+      </div>
+      <div class="dash-stat">
+        <div class="dash-stat-n" style="color:var(--accent2)">${prefRate}%</div>
+        <div class="dash-stat-l">선호교실 적중률</div>
+        <div class="dash-stat-sub">${prefHit}명 선호 배정</div>
+      </div>
+      <div class="dash-stat">
+        <div class="dash-stat-n" style="color:${unassigned.length>0?'var(--red)':'var(--green)'}">${unassigned.length}</div>
+        <div class="dash-stat-l">미배정</div>
+        <div class="dash-stat-sub">${unassigned.filter(s=>s.grade===3).length}명 3학년</div>
+      </div>
+    </div>
+
+    <!-- 학년별 분포 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+      <div class="card">
+        <div class="card-title">학년별 신청 현황</div>
+        <div class="grade-chart">
+          ${grades.map(g=>`
+            <div class="grade-bar-wrap">
+              <div class="grade-bar-val">${gradeCount[g]||0}</div>
+              <div class="grade-bar" style="background:${gradeColors[g]};height:${Math.round(((gradeCount[g]||0)/maxGrade)*80)+4}px;"></div>
+              <div class="grade-bar-label">${g}학년</div>
+            </div>`).join('')}
+        </div>
+        <div class="sep" style="margin:12px 0;"></div>
+        ${grades.map(g=>`
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;">
+            <span class="tag tag-${g}">${g}학년</span>
+            <div style="flex:1;background:var(--surface3);border-radius:3px;height:5px;">
+              <div style="width:${total>0?Math.round((gradeCount[g]||0)/total*100):0}%;background:${gradeColors[g]};height:100%;border-radius:3px;"></div>
+            </div>
+            <span style="font-family:'DM Mono',monospace;min-width:30px;text-align:right;">${gradeCount[g]||0}명</span>
+          </div>`).join('')}
+      </div>
+
+      <div class="card">
+        <div class="card-title">학년별 배정률</div>
+        ${grades.map(g=>`
+          <div style="margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+              <span class="tag tag-${g}">${g}학년</span>
+              <span style="font-family:'DM Mono',monospace;color:var(--text2)">${gradeAssigned[g]||0} / ${gradeCount[g]||0}명</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:${gradeCount[g]>0?Math.round((gradeAssigned[g]||0)/(gradeCount[g])*100):0}%;background:${gradeColors[g]};"></div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- 학습실별 현황 -->
+    <div class="card">
+      <div class="card-title">학습실별 좌석 현황</div>
+      ${spaces.map(sp=>{
+        const cnt = (roomAssign[sp.id]||[]).length;
+        const pct = sp.cap>0?cnt/sp.cap:0;
+        const g1 = (roomAssign[sp.id]||[]).filter(s=>s.grade===1).length;
+        const g2 = (roomAssign[sp.id]||[]).filter(s=>s.grade===2).length;
+        const g3 = (roomAssign[sp.id]||[]).filter(s=>s.grade===3).length;
+        return `
+          <div style="margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+              <span style="font-weight:600;min-width:80px;">${sp.name}</span>
+              <span class="space-badge badge-${sp.group.toLowerCase()}">${sp.group}그룹</span>
+              <span style="font-size:12px;color:var(--text3);margin-left:auto;">${cnt} / ${sp.cap}석 · 잔여 ${sp.cap-cnt}석</span>
+            </div>
+            <div class="bar-track" style="height:10px;border-radius:5px;">
+              <div style="display:flex;height:100%;border-radius:5px;overflow:hidden;">
+                ${g1>0?`<div style="width:${sp.cap>0?g1/sp.cap*100:0}%;background:var(--green);"></div>`:''}
+                ${g2>0?`<div style="width:${sp.cap>0?g2/sp.cap*100:0}%;background:var(--yellow);"></div>`:''}
+                ${g3>0?`<div style="width:${sp.cap>0?g3/sp.cap*100:0}%;background:var(--red);"></div>`:''}
+              </div>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:5px;font-size:11px;color:var(--text3);">
+              <span><span class="status-dot dot-green"></span>1학년 ${g1}명</span>
+              <span><span class="status-dot dot-yellow"></span>2학년 ${g2}명</span>
+              <span><span class="status-dot dot-red"></span>3학년 ${g3}명</span>
+              <span style="margin-left:auto;">${Math.round(pct*100)}% 사용</span>
+            </div>
+          </div>`;
+      }).join('')}
+    </div>
+
+    <!-- 미배정 현황 -->
+    ${unassigned.length>0?`
+    <div class="card">
+      <div class="card-title">미배정 현황 분석</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
+        ${grades.map(g=>`
+          <div style="background:var(--surface2);border-radius:var(--rs);padding:12px;text-align:center;">
+            <div style="font-size:20px;font-weight:900;font-family:'DM Mono',monospace;color:${gradeColors[g]}">${unassigned.filter(s=>s.grade===g).length}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:3px;">${g}학년 미배정</div>
+          </div>`).join('')}
+      </div>
+      <div class="hint" style="margin-bottom:0;">
+        ${unassigned.filter(s=>s.grade===3).length>0?`3학년 ${unassigned.filter(s=>s.grade===3).length}명: A그룹 전체 정원이 초과되어 미배정 (B그룹 배정 불가)<br>`:''}
+        ${unassigned.filter(s=>s.grade<=2).length>0?`1·2학년 ${unassigned.filter(s=>s.grade<=2).length}명: A·B그룹 전체 정원 초과로 미배정`:''}
+      </div>
+    </div>`:''}
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-outline" onclick="exportResult()">📊 엑셀로 저장</button>
+      <button class="btn btn-outline" onclick="goTab(2)">← 배치 결과 보기</button>
+    </div>`;
+
+  document.getElementById('dashboard-area').innerHTML = html;
+}
+
+/* ══════════════════════════════
+   엑셀 내보내기
+══════════════════════════════ */
+function exportResult() {
+  if(!lastResult){alert('먼저 배치를 실행해주세요.');return;}
+  const {roomAssign, unassigned, detail} = lastResult;
+  const wb = XLSX.utils.book_new();
+
+  const DAYS  = ['월','화','수','목','금'];
+  const TIMES = ['오후','야간1','야간2'];
+
+  function fmtSlotsByDay(slots) {
+    if(!slots||slots.length===0) return '-';
+    const map = {};
+    slots.forEach(sl=>{
+      const [day,...rest] = sl.split('-');
+      const time = rest.join('-');
+      if(!map[day]) map[day]=[];
+      map[day].push(time);
+    });
+    return DAYS.filter(d=>map[d]).map(d=>`${d}(${map[d].join('·')})`).join(', ');
+  }
+
+  function fmtZone(s, spName) {
+    if(spName==='양현재'){
+      if(s.seatZone==='A') return '1~39번 구역';
+      if(s.seatZone==='B') return '40~77번 구역';
+      if(s.seatZone==='C') return '80~85번 구역';
+      if(s.seatZone==='special') return '78·79번(1·2학년)';
+      return '양현재';
+    }
+    if(spName==='스터디카페'){
+      if(s.seatZone==='fixed')    return '고정(1~8번)';
+      if(s.seatZone==='share')    return '쉐어(9~15번)';
+      if(s.seatZone==='shortday') return '단기(21~25번)';
+      if(s.seatZone==='overflow') return '잔여(26~30번)';
+      return '일반(16~20번)';
+    }
+    return '-';
+  }
+
+  /* ════════════════════════════════════════
+     시트 1: 전체결과
+  ════════════════════════════════════════ */
+  const allRows = [[
+    '학번','이름','학년','선호교실','배정교실','좌석구역',
+    '신청타임수','신청요일·타임','선호일치','상태'
+  ]];
+  spaces.forEach(sp=>{
+    (roomAssign[sp.id]||[]).forEach(s=>{
+      allRows.push([
+        s.studentId||'-', s.name, s.grade+'학년', s.pref||'-',
+        sp.name, fmtZone(s,sp.name),
+        s.times||'-', fmtSlotsByDay(s.slots),
+        s.pref===sp.name?'O':'X', '배정완료'
+      ]);
+    });
+  });
+  unassigned.forEach(s=>allRows.push([
+    s.studentId||'-', s.name, s.grade+'학년', s.pref||'-',
+    '미배정','-', s.times||'-', fmtSlotsByDay(s.slots),'-',
+    '미배정('+( s.reason||'자리부족')+')'
+  ]));
+  const ws1 = XLSX.utils.aoa_to_sheet(allRows);
+  ws1['!cols']=[{wch:8},{wch:10},{wch:6},{wch:12},{wch:12},{wch:14},{wch:8},{wch:30},{wch:8},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, ws1, '전체결과');
+
+  /* ════════════════════════════════════════
+     시트 2: 학생별 좌석표 (피벗)
+     행: 학생 | 열: 요일별 오후/야간1/야간2 → 셀값: 좌석번호
+     이미지 예시처럼: A학생 1번, B학생 월2번·목10번 등
+  ════════════════════════════════════════ */
+  // 헤더 행 구성
+  // 1행: 학번 | 이름 | 학년 | 배정교실 | 좌석구역 | [월] [월] [월] [화] ... 병합용
+  // 2행:                                            오후 야간1 야간2 오후 ...
+  const pivotHeader1 = ['학번','이름','학년','배정교실','좌석구역','신청타임'];
+  const pivotHeader2 = ['','','','','',''];
+  DAYS.forEach(d=>{
+    TIMES.forEach((t,ti)=>{
+      pivotHeader1.push(ti===0 ? d+'요일' : ''); // 요일은 첫 타임 셀에만
+      pivotHeader2.push(t);
+    });
+  });
+
+  const pivotRows = [pivotHeader1, pivotHeader2];
+
+  // 학생별 슬롯→좌석번호 맵 만들기
+  // 각 학생의 slots 배열과 seatNum을 알아야 함
+  // 스터디카페 쉐어는 슬롯마다 seatNum이 다를 수 있음 → shareSlots에서 추출
+  const stuSeatMap = new Map(); // studentId+name → {slot → seatNum}
+
+  spaces.forEach(sp=>{
+    (roomAssign[sp.id]||[]).forEach(s=>{
+      const key = (s.studentId||'')+'/'+s.name;
+      if(!stuSeatMap.has(key)) stuSeatMap.set(key, {stu:s, sp, slotSeat:{}});
+      const entry = stuSeatMap.get(key);
+
+      if(s.slots && s.slots.length>0){
+        s.slots.forEach(sl=>{
+          entry.slotSeat[sl] = s.seatNum||'-';
+        });
+      }
+    });
+  });
+
+  // 스터디카페 쉐어: shareSlots에서 occupant별 슬롯·좌석 재정리
+  if(detail?.studycafe?.shareSlots){
+    detail.studycafe.shareSlots.forEach(seat=>{
+      seat.occupants.forEach(s=>{
+        const key = (s.studentId||'')+'/'+s.name;
+        if(!stuSeatMap.has(key)) return;
+        const entry = stuSeatMap.get(key);
+        (s.slots||[]).forEach(sl=>{
+          entry.slotSeat[sl] = seat.seatNum;
+        });
+      });
+    });
+  }
+
+  // 행 생성
+  stuSeatMap.forEach((entry)=>{
+    const {stu, sp, slotSeat} = entry;
+    const row = [
+      stu.studentId||'-',
+      stu.name,
+      stu.grade+'학년',
+      sp.name,
+      fmtZone(stu, sp.name),
+      stu.times||'-'
+    ];
+    DAYS.forEach(d=>{
+      TIMES.forEach(t=>{
+        const slot = d+'-'+t;
+        const seatNum = slotSeat[slot];
+        row.push(seatNum !== undefined ? seatNum : '-');
+      });
+    });
+    pivotRows.push(row);
+  });
+
+  // 미배정
+  unassigned.forEach(s=>{
+    const row = [s.studentId||'-', s.name, s.grade+'학년','미배정','-',s.times||'-'];
+    DAYS.forEach(()=>TIMES.forEach(()=>row.push('-')));
+    pivotRows.push(row);
+  });
+
+  const ws2 = XLSX.utils.aoa_to_sheet(pivotRows);
+
+  // 열 너비
+  const colWidths = [{wch:8},{wch:10},{wch:6},{wch:12},{wch:14},{wch:8}];
+  DAYS.forEach(()=>TIMES.forEach(()=>colWidths.push({wch:5})));
+  ws2['!cols'] = colWidths;
+
+  // 요일 헤더 병합 (3칸씩)
+  const merges = [];
+  DAYS.forEach((d,di)=>{
+    const startCol = 6 + di*3;
+    merges.push({s:{r:0,c:startCol}, e:{r:0,c:startCol+2}});
+  });
+  ws2['!merges'] = merges;
+
+  // 스타일: 헤더 행 배경색 (XLSX 기본은 스타일 미지원, xlsx-style 필요 없이 조건부 처리)
+  XLSX.utils.book_append_sheet(wb, ws2, '학생별좌석표(피벗)');
+
+  /* ════════════════════════════════════════
+     시트 3: 학습실별 상세 (구역별 섹션)
+  ════════════════════════════════════════ */
+  spaces.forEach(sp=>{
+    const stus = roomAssign[sp.id]||[];
+    if(stus.length===0) return;
+    const isYH = sp.name==='양현재';
+    const isSC = sp.name==='스터디카페';
+    const rows = [];
+
+    const secHeader = ['좌석번호','학번','이름','학년','신청타임수','신청요일·타임','선호일치'];
+
+    if(isYH && detail?.yanghyunjae){
+      [
+        {label:'[1~39번 구역 — 고3 우선]',    list:detail.yanghyunjae.zoneA},
+        {label:'[40~77번 구역]',               list:detail.yanghyunjae.zoneB},
+        {label:'[80~85번 구역]',               list:detail.yanghyunjae.zoneC||[]},
+        {label:'[78·79번 — 1·2학년 전용]',    list:detail.yanghyunjae.special},
+      ].forEach(z=>{
+        if(!z.list||z.list.length===0) return;
+        rows.push([z.label]); rows.push(secHeader);
+        z.list.forEach(s=>rows.push([
+          s.seatNum||'-', s.studentId||'-', s.name, s.grade+'학년',
+          s.times||'-', fmtSlotsByDay(s.slots), s.pref===sp.name?'O':'X'
+        ]));
+        rows.push([]);
+      });
+    } else if(isSC && detail?.studycafe){
+      [
+        {label:'[1~8번 — 고정 자리]',          list:detail.studycafe.fixed},
+        {label:'[9~15번 — 쉐어 자리]',          list:detail.studycafe.share},
+        {label:'[16~20번 — 일반]',              list:detail.studycafe.general},
+        {label:'[21~25번 — 1~2일 신청자]',      list:detail.studycafe.shortDay},
+        {label:'[26~30번 — 잔여]',              list:detail.studycafe.overflow},
+      ].forEach(z=>{
+        if(!z.list||z.list.length===0) return;
+        rows.push([z.label]); rows.push(secHeader);
+        z.list.forEach(s=>rows.push([
+          s.seatNum||'-', s.studentId||'-', s.name, s.grade+'학년',
+          s.times||'-', fmtSlotsByDay(s.slots), s.pref===sp.name?'O':'X'
+        ]));
+        rows.push([]);
+      });
+    } else {
+      rows.push(secHeader);
+      stus.forEach(s=>rows.push([
+        s.seatNum||'-', s.studentId||'-', s.name, s.grade+'학년',
+        s.times||'-', fmtSlotsByDay(s.slots), s.pref===sp.name?'O':'X'
+      ]));
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:8},{wch:8},{wch:10},{wch:6},{wch:8},{wch:30},{wch:8}];
+    XLSX.utils.book_append_sheet(wb, ws, sp.name.slice(0,31));
+  });
+
+  /* ════════════════════════════════════════
+     시트 4: 미배정
+  ════════════════════════════════════════ */
+  if(unassigned.length>0){
+    const rows=[['학번','이름','학년','선호교실','신청타임수','신청요일·타임','미배정사유']];
+    unassigned.forEach(s=>rows.push([
+      s.studentId||'-', s.name, s.grade+'학년', s.pref||'-',
+      s.times||'-', fmtSlotsByDay(s.slots), s.reason||'자리 부족'
+    ]));
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:8},{wch:10},{wch:6},{wch:12},{wch:8},{wch:30},{wch:20}];
+    XLSX.utils.book_append_sheet(wb, ws, '미배정');
+  }
+
+  XLSX.writeFile(wb, '자율학습_배치결과.xlsx');
+}
+
+/* ══════════════════════════════
+   초기화
+══════════════════════════════ */
+function resetAll() {
+  if(!confirm('모든 데이터를 초기화할까요?'))return;
+  students=[];manSid=0;lastResult=null;
+  document.getElementById('manual-tbody').innerHTML='';
+  document.getElementById('upload-preview').innerHTML='';
+  document.getElementById('result-area').innerHTML='<div class="empty-state"><div class="empty-icon">⚙️</div><div>학생 명단을 입력하고 배치를 실행해주세요.</div></div>';
+  document.getElementById('dashboard-area').innerHTML='<div class="empty-state"><div class="empty-icon">📊</div><div>배치를 실행하면 대시보드가 생성됩니다.</div></div>';
+  updateManCnt();
+  goTab(0);
+}
+
+/* 드래그드롭 */
+const dz=document.getElementById('drop-zone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');handleFile(e.dataTransfer.files[0]);});
+
+/* 초기 렌더 */
+renderSpaces();
+</script>
+</body>
+</html>
