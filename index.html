@@ -9,27 +9,27 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&display=swap');
 
 :root {
-  --bg: #0F1117;
-  --surface: #1A1D27;
-  --surface2: #22263A;
-  --surface3: #2A2F47;
-  --border: #2E3350;
-  --border2: #3D4466;
-  --text: #E8EAF6;
-  --text2: #8B90B8;
-  --text3: #555A7A;
-  --accent: #5B6EF5;
-  --accent2: #7C8EFF;
-  --accent-l: rgba(91,110,245,0.12);
-  --green: #3DD68C;
-  --green-l: rgba(61,214,140,0.1);
-  --red: #FF5C7A;
-  --red-l: rgba(255,92,122,0.1);
-  --yellow: #FFB84D;
-  --yellow-l: rgba(255,184,77,0.1);
-  --purple: #B57BFF;
-  --purple-l: rgba(181,123,255,0.1);
-  --cyan: #3DD6D6;
+  --bg: #F5F6FA;
+  --surface: #FFFFFF;
+  --surface2: #F0F2F8;
+  --surface3: #E5E8F0;
+  --border: #D8DCE8;
+  --border2: #B8BECC;
+  --text: #1A1D2E;
+  --text2: #4A5068;
+  --text3: #8A90A8;
+  --accent: #4A5EE8;
+  --accent2: #3A4ED8;
+  --accent-l: rgba(74,94,232,0.08);
+  --green: #18A85A;
+  --green-l: rgba(24,168,90,0.08);
+  --red: #E03050;
+  --red-l: rgba(224,48,80,0.08);
+  --yellow: #D4870A;
+  --yellow-l: rgba(212,135,10,0.08);
+  --purple: #7C4DC8;
+  --purple-l: rgba(124,77,200,0.08);
+  --cyan: #0A9EA0;
   --r: 14px; --rs: 8px;
 }
 
@@ -209,7 +209,7 @@ table { width: 100%; border-collapse: collapse; font-size: 12px; }
 th { background: var(--surface2); color: var(--text3); font-weight: 600; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; }
 td { padding: 9px 10px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
 tr:last-child td { border-bottom: none; }
-tr:hover td { background: var(--surface2); }
+tr:hover td { background: #EEF0F8; }
 
 /* ── 태그 ── */
 .tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 20px; margin: 1px; }
@@ -225,7 +225,7 @@ tr:hover td { background: var(--surface2); }
 /* ── 대시보드 ── */
 .dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
 .dash-stat {
-  background: var(--surface2);
+  background: #F0F2F8;
   border: 1px solid var(--border);
   border-radius: var(--r);
   padding: 16px;
@@ -257,7 +257,7 @@ tr:hover td { background: var(--surface2); }
 .bar-fill { height: 100%; border-radius: 4px; transition: width .5s ease; }
 .room-body { max-height: 280px; overflow-y: auto; }
 .room-body::-webkit-scrollbar { width: 4px; }
-.room-body::-webkit-scrollbar-track { background: transparent; }
+.room-body::-webkit-scrollbar-track { background: #F5F6FA; }
 .room-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 .room-row { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--border); font-size: 12px; }
 .room-row:last-child { border-bottom: none; }
@@ -691,30 +691,35 @@ function slotsOverlap(a, b) {
    ─ 3학년은 쉐어 불가 (단독 1석)
 ══════════════════════════════ */
 function allocYanghyunjae(candidates, sorted) {
-  // 자리 풀 생성 (seatNum, occupants)
-  const seatsA = Array.from({length:39}, (_,i)=>({seatNum:i+1,      occupants:[]}));
-  const seatsB = Array.from({length:38}, (_,i)=>({seatNum:40+i,     occupants:[]}));
-  const seatsC = Array.from({length:6},  (_,i)=>({seatNum:80+i,     occupants:[]}));
-  const seatsS = Array.from({length:2},  (_,i)=>({seatNum:78+i,     occupants:[]})); // 78,79번
+  const seatsA = Array.from({length:39}, (_,i)=>({seatNum:i+1,  occupants:[]}));
+  const seatsB = Array.from({length:38}, (_,i)=>({seatNum:40+i, occupants:[]}));
+  const seatsC = Array.from({length:6},  (_,i)=>({seatNum:80+i, occupants:[]}));
+  const seatsS = Array.from({length:2},  (_,i)=>({seatNum:78+i, occupants:[]})); // 78,79번
 
   const assigned = new Set();
 
-  // 해당 자리에 앉을 수 있는지 판단
-  function canSit(seat, stu) {
-    if(seat.occupants.length===0) return true;          // 빈 자리
-    if(stu.grade===3) return false;                      // 3학년 단독
-    if(seat.occupants.some(o=>o.grade===3)) return false;// 고3 있으면 불가
-    const hasSlots = stu.slots&&stu.slots.length>0;
-    const othersHaveSlots = seat.occupants.every(o=>o.slots&&o.slots.length>0);
-    if(!hasSlots||!othersHaveSlots) return false;        // 슬롯 정보 없으면 불가
-    const taken = seat.occupants.flatMap(o=>o.slots);
-    return !slotsOverlap(taken, stu.slots);              // 슬롯 겹치면 불가
+  // 빈 자리에만 배정 (1인 1석)
+  function canSitEmpty(seat) {
+    return seat.occupants.length === 0;
   }
 
-  function tryPlace(seatList, stu, zone) {
+  // 쉐어 가능 여부 (슬롯 안 겹치고, 고3 단독 원칙)
+  function canShare(seat, stu) {
+    if(seat.occupants.length===0) return true;
+    if(stu.grade===3) return false;                       // 고3은 쉐어 불가
+    if(seat.occupants.some(o=>o.grade===3)) return false; // 고3 있으면 불가
+    if(!(stu.slots&&stu.slots.length>0)) return false;
+    if(seat.occupants.some(o=>!(o.slots&&o.slots.length>0))) return false;
+    const taken = seat.occupants.flatMap(o=>o.slots);
+    return !slotsOverlap(taken, stu.slots);
+  }
+
+  function place(seatList, stu, zone, shareOk) {
     for(const seat of seatList) {
-      if(canSit(seat, stu)) {
-        const obj = {...stu, seatZone:zone, seatNum:seat.seatNum};
+      const ok = shareOk ? canShare(seat, stu) : canSitEmpty(seat);
+      if(ok) {
+        const obj = {...stu, seatZone:zone, seatNum:seat.seatNum,
+                    isShared: seat.occupants.length > 0};
         seat.occupants.push(obj);
         assigned.add(stu.id);
         return obj;
@@ -723,20 +728,28 @@ function allocYanghyunjae(candidates, sorted) {
     return null;
   }
 
-  // 1) 고3 → zoneA 우선, 넘치면 zoneB → zoneC
+  // ── 1차: 빈 자리 우선 배정 (1인 1석) ──
+  // 고3 → zoneA 우선
   for(const stu of sorted) {
     if(!candidates.has(stu.id)||stu.grade!==3) continue;
-    if(!tryPlace(seatsA,stu,'A')) if(!tryPlace(seatsB,stu,'B')) tryPlace(seatsC,stu,'C');
+    if(!place(seatsA,stu,'A',false)) if(!place(seatsB,stu,'B',false)) place(seatsC,stu,'C',false);
   }
-  // 2) 1·2학년 → special(78·79) 먼저
+  // 1·2학년 → special(78·79) 먼저, 그 다음 zoneA → B → C
   for(const stu of sorted) {
     if(!candidates.has(stu.id)||assigned.has(stu.id)||stu.grade>2) continue;
-    tryPlace(seatsS, stu, 'special');
+    if(!place(seatsS,stu,'special',false))
+      if(!place(seatsA,stu,'A',false)) if(!place(seatsB,stu,'B',false)) place(seatsC,stu,'C',false);
   }
-  // 3) 1·2학년 → zoneA → zoneB → zoneC
+
+  // ── 2차: 빈 자리 없는 학생 → 쉐어 시도 (슬롯 안 겹치면) ──
+  // 고3은 쉐어 최소화: 빈 자리가 정말 없을 때만 쉐어 허용
+  // → 고3 쉐어는 허용하지 않음 (단독 원칙 유지, 자리 없으면 미배정)
   for(const stu of sorted) {
-    if(!candidates.has(stu.id)||assigned.has(stu.id)||stu.grade>2) continue;
-    if(!tryPlace(seatsA,stu,'A')) if(!tryPlace(seatsB,stu,'B')) tryPlace(seatsC,stu,'C');
+    if(!candidates.has(stu.id)||assigned.has(stu.id)) continue;
+    if(stu.grade===3) continue; // 고3은 쉐어 안 함
+    // 1·2학년: 슬롯 안 겹치면 쉐어 허용
+    if(!place(seatsS,stu,'special',true))
+      if(!place(seatsA,stu,'A',true)) if(!place(seatsB,stu,'B',true)) place(seatsC,stu,'C',true);
   }
 
   const zoneA   = seatsA.flatMap(s=>s.occupants);
@@ -749,18 +762,9 @@ function allocYanghyunjae(candidates, sorted) {
            seatsA, seatsB, seatsC, seatsS };
 }
 
-/* ══════════════════════════════
-   스터디카페 배치 (30석)
-   ─ 1~8번  (실제 16석): 고정 1인 1석
-   ─ 9~15번 (7자리):     쉐어 가능 (슬롯 안 겹치면), 3학년 단독
-   ─ 16~20번(5석):       일반 1인 1석
-   ─ 21~25번(5석):       1~2일 신청자 전용
-   ─ 26~30번(5석):       나머지
-══════════════════════════════ */
 function allocStudyCafe(candidates, sorted) {
-  // 고정 1~8번: PDF에서 1,3,5,7이 각 2자리 → 실제 16석
-  // seatNum: 1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8
-  const fixedSeats    = Array.from({length:16}, (_,i)=>({seatNum:Math.floor(i/2)+1, occupants:[]}));
+  // 고정석 1~8번: 총 8자리, 1인 1석
+  const fixedSeats = Array.from({length:8}, (_,i)=>({seatNum:i+1, occupants:[]}));
   const shareSeats    = Array.from({length:7},  (_,i)=>({seatNum:9+i,  occupants:[]}));
   const generalSeats  = Array.from({length:5},  (_,i)=>({seatNum:16+i, occupants:[]}));
   const shortDaySeats = Array.from({length:5},  (_,i)=>({seatNum:21+i, occupants:[]}));
@@ -780,7 +784,7 @@ function allocStudyCafe(candidates, sorted) {
   function placeEmpty(seatList, zone, stu) {
     for(const seat of seatList) {
       if(seat.occupants.length===0) {
-        const obj = {...stu, seatZone:zone, seatNum:seat.seatNum};
+        const obj = {...stu, seatZone:zone, seatNum:seat.seatNum, isShared:false};
         seat.occupants.push(obj);
         assigned.add(stu.id);
         return obj;
@@ -792,7 +796,8 @@ function allocStudyCafe(candidates, sorted) {
   function placeShare(seatList, zone, stu) {
     for(const seat of seatList) {
       if(canShare(seat, stu)) {
-        const obj = {...stu, seatZone:zone, seatNum:seat.seatNum};
+        const obj = {...stu, seatZone:zone, seatNum:seat.seatNum,
+                    isShared: seat.occupants.length > 0};
         seat.occupants.push(obj);
         assigned.add(stu.id);
         return obj;
@@ -801,33 +806,32 @@ function allocStudyCafe(candidates, sorted) {
     return null;
   }
 
-  // 1) 고정 1~8 (16석): 빈 자리에 순서대로
+  // ── 1차: 빈 자리 우선 배정 ──
+  // 고정(1~8) → 쉐어존(9~15) → 단기(21~25) → 일반(16~20) → 나머지(26~30)
   for(const stu of sorted) {
     if(!candidates.has(stu.id)) continue;
-    placeEmpty(fixedSeats, 'fixed', stu);
+    if(placeEmpty(fixedSeats,'fixed',stu)) continue;
+    if(placeEmpty(shareSeats,'share',stu)) continue;
+    const days=getUniqueDays(stu.slots);
+    const isShort=stu.slots&&stu.slots.length>0?days<=2:stu.times<=2;
+    if(isShort&&placeEmpty(shortDaySeats,'shortday',stu)) continue;
+    if(placeEmpty(generalSeats,'general',stu)) continue;
+    placeEmpty(overflowSeats,'overflow',stu);
   }
-  // 2) 9~15 쉐어: 빈 자리 우선, 없으면 슬롯 안 겹치는 자리
+
+  // ── 2차: 빈 자리 없는 학생 → 쉐어 시도 (9~15번 쉐어존) ──
+  // 고3은 쉐어 최소화 → 쉐어 시도 안 함
   for(const stu of sorted) {
     if(!candidates.has(stu.id)||assigned.has(stu.id)) continue;
-    placeShare(shareSeats, 'share', stu);
-  }
-  // 3) 21~25: 요일 1~2일 신청자
-  for(const stu of sorted) {
-    if(!candidates.has(stu.id)||assigned.has(stu.id)) continue;
-    const days = getUniqueDays(stu.slots);
-    const isShort = stu.slots&&stu.slots.length>0 ? days<=2 : stu.times<=2;
-    if(!isShort) continue;
-    placeEmpty(shortDaySeats, 'shortday', stu);
-  }
-  // 4) 16~20: 일반
-  for(const stu of sorted) {
-    if(!candidates.has(stu.id)||assigned.has(stu.id)) continue;
-    placeEmpty(generalSeats, 'general', stu);
-  }
-  // 5) 26~30: 나머지
-  for(const stu of sorted) {
-    if(!candidates.has(stu.id)||assigned.has(stu.id)) continue;
-    placeEmpty(overflowSeats, 'overflow', stu);
+    if(stu.grade===3) continue;
+    // 1·2학년: 쉐어존(9~15) → 고정(1~8) → 단기(21~25) → 일반(16~20) → 나머지(26~30) 순으로 쉐어 시도
+    if(placeShare(shareSeats,'share',stu)) continue;
+    if(placeShare(fixedSeats,'fixed',stu)) continue;
+    const days=getUniqueDays(stu.slots);
+    const isShort=stu.slots&&stu.slots.length>0?days<=2:stu.times<=2;
+    if(isShort&&placeShare(shortDaySeats,'shortday',stu)) continue;
+    if(placeShare(generalSeats,'general',stu)) continue;
+    placeShare(overflowSeats,'overflow',stu);
   }
 
   const fixed    = fixedSeats.flatMap(s=>s.occupants);
@@ -869,21 +873,40 @@ function runAlloc() {
   const globalAssigned = new Set();
   const detail = { yanghyunjae:null, studycafe:null, ipsang:[], gdamter:[], munhyangjeon:[] };
 
-  /* ── 1단계: 선호 교실 배치 ── */
-  // 선호 교실이 양현재인 학생
-  const yhCand = new Set(sorted.filter(s=>s.pref==='양현재').map(s=>s.id));
-  // 선호 교실이 스터디카페인 학생
-  const scCand = new Set(sorted.filter(s=>s.pref==='스터디카페'||s.pref==='스터디 카페').map(s=>s.id));
+  /* ── 0단계: 1·2학년 + 오후만 신청한 학생 → 꿈담터·문향전 우선 배정 ──
+     양현재·스터디카페 배정에서 제외하고, 반드시 B그룹으로만 배정
+  ── */
+  const bGroupOnly = new Set(
+    sorted.filter(s => s.grade<=2 && isAfternoonOnly(s)).map(s=>s.id)
+  );
+
+  for(const stu of sorted) {
+    if(!bGroupOnly.has(stu.id)) continue;
+    if(detail.gdamter.length < GD_CAP) {
+      detail.gdamter.push({...stu, seatNum:detail.gdamter.length+1});
+      globalAssigned.add(stu.id);
+    } else if(detail.munhyangjeon.length < MH_CAP) {
+      detail.munhyangjeon.push({...stu, seatNum:detail.munhyangjeon.length+1});
+      globalAssigned.add(stu.id);
+    }
+    // 꿈담터·문향전 모두 만석이면 미배정 (양현재·스터디카페에는 배정 안 함)
+  }
+
+  /* ── 1단계: 선호 교실 배치 (B그룹 대상자 제외) ── */
+  // 선호 교실이 양현재인 학생 (오후만 1·2학년 제외)
+  const yhCand = new Set(sorted.filter(s=>s.pref==='양현재'&&!bGroupOnly.has(s.id)).map(s=>s.id));
+  // 선호 교실이 스터디카페인 학생 (오후만 1·2학년 제외)
+  const scCand = new Set(sorted.filter(s=>(s.pref==='스터디카페'||s.pref==='스터디 카페')&&!bGroupOnly.has(s.id)).map(s=>s.id));
   // 선호 교실이 입시상담실인 학생 (3학년만 가능)
-  const isCand = new Set(sorted.filter(s=>(s.pref==='입시상담실')&&s.grade===3).map(s=>s.id));
+  const isCand = new Set(sorted.filter(s=>s.pref==='입시상담실'&&s.grade===3).map(s=>s.id));
 
   // 양현재 선호 학생 배치
-  const yhResult = allocYanghyunjae(yhCand, sorted);
+  const yhResult = allocYanghyunjae(yhCand, sorted.filter(s=>!bGroupOnly.has(s.id)));
   yhResult.assigned.forEach(id=>globalAssigned.add(id));
   detail.yanghyunjae = yhResult;
 
   // 스터디카페 선호 학생 배치
-  const scResult = allocStudyCafe(scCand, sorted);
+  const scResult = allocStudyCafe(scCand, sorted.filter(s=>!bGroupOnly.has(s.id)));
   scResult.assigned.forEach(id=>globalAssigned.add(id));
   detail.studycafe = scResult;
 
@@ -897,17 +920,21 @@ function runAlloc() {
   }
 
   /* ── 헬퍼: 양현재·스터디카페·입시상담실 잔여에 학생 추가 배정 ── */
-  function addToYH(stu) {
+  function addToYH(stu, shareMode) {
     function tryOn(seatList, zone) {
       for(const seat of seatList) {
-        const can = seat.occupants.length===0 ? true : (() => {
-          if(stu.grade===3||seat.occupants.some(o=>o.grade===3)) return false;
-          if(!(stu.slots&&stu.slots.length>0)) return false;
-          if(seat.occupants.some(o=>!(o.slots&&o.slots.length>0))) return false;
-          return !slotsOverlap(seat.occupants.flatMap(o=>o.slots), stu.slots);
-        })();
+        const can = shareMode
+          ? (() => {
+              if(seat.occupants.length===0) return true;
+              if(stu.grade===3||seat.occupants.some(o=>o.grade===3)) return false;
+              if(!(stu.slots&&stu.slots.length>0)) return false;
+              if(seat.occupants.some(o=>!(o.slots&&o.slots.length>0))) return false;
+              return !slotsOverlap(seat.occupants.flatMap(o=>o.slots), stu.slots);
+            })()
+          : seat.occupants.length===0;
         if(can) {
-          const obj = {...stu, seatZone:zone, seatNum:seat.seatNum};
+          const obj = {...stu, seatZone:zone, seatNum:seat.seatNum,
+                      isShared: seat.occupants.length>0};
           seat.occupants.push(obj);
           globalAssigned.add(stu.id);
           if(zone==='A') detail.yanghyunjae.zoneA.push(obj);
@@ -928,19 +955,21 @@ function runAlloc() {
     }
   }
 
-  function addToSC(stu) {
-    function tryOn(seatList, zone, shareMode) {
+  function addToSC(stu, shareMode) {
+    function tryOn(seatList, zone, allowShare) {
       for(const seat of seatList) {
-        const can = shareMode
-          ? (seat.occupants.length===0||(() => {
+        const can = (shareMode && allowShare)
+          ? (() => {
+              if(seat.occupants.length===0) return true;
               if(stu.grade===3||seat.occupants.some(o=>o.grade===3)) return false;
               if(!(stu.slots&&stu.slots.length>0)) return false;
               if(seat.occupants.some(o=>!(o.slots&&o.slots.length>0))) return false;
               return !slotsOverlap(seat.occupants.flatMap(o=>o.slots), stu.slots);
-            })())
+            })()
           : seat.occupants.length===0;
         if(can) {
-          const obj = {...stu, seatZone:zone, seatNum:seat.seatNum};
+          const obj = {...stu, seatZone:zone, seatNum:seat.seatNum,
+                      isShared: seat.occupants.length>0};
           seat.occupants.push(obj);
           globalAssigned.add(stu.id);
           detail.studycafe.all.push(obj);
@@ -956,11 +985,11 @@ function runAlloc() {
     }
     const days = getUniqueDays(stu.slots);
     const isShort = stu.slots&&stu.slots.length>0 ? days<=2 : stu.times<=2;
-    return tryOn(scResult.fixedSeats,'fixed',false)||
+    return tryOn(scResult.fixedSeats,'fixed',true)||
            tryOn(scResult.shareSeats,'share',true)||
-           (isShort&&tryOn(scResult.shortDaySeats,'shortday',false))||
-           tryOn(scResult.generalSeats,'general',false)||
-           tryOn(scResult.overflowSeats,'overflow',false);
+           (isShort&&tryOn(scResult.shortDaySeats,'shortday',true))||
+           tryOn(scResult.generalSeats,'general',true)||
+           tryOn(scResult.overflowSeats,'overflow',true);
   }
 
   function addToIS(stu) {
@@ -974,39 +1003,33 @@ function runAlloc() {
   }
 
   /* ── 2단계: 미배정 → 양현재 우선 → 스터디카페 → 입시상담실(3학년만) ── */
-  // 규칙:
-  //   스터디카페 희망이더라도 양현재에 자리 있으면 양현재로
-  //   양현재 희망이더라도 스터디카페/입시상담실 자리 있으면 거기로
-  //   입시상담실은 3학년만 가능
-
+  // 2-1: 1차 - 빈 자리에만 배정 (bGroupOnly 제외)
   for(const stu of sorted) {
     if(globalAssigned.has(stu.id)) continue;
-    // 양현재 잔여 우선 (전학년)
-    if(addToYH(stu)) continue;
-    // 양현재 만석 → 스터디카페 잔여
-    if(addToSC(stu)) continue;
-    // 스터디카페도 만석 → 입시상담실 (3학년만)
+    if(bGroupOnly.has(stu.id)) continue;   // 오후만 1·2학년은 B그룹 전용
+    if(addToYH(stu, false)) continue;      // 빈 자리만
+    if(addToSC(stu, false)) continue;      // 빈 자리만
     addToIS(stu);
   }
 
-  /* ── 3단계: B그룹 (꿈담터·문향전) — 오후만 신청한 1·2학년 ── */
+  // 2-2: 2차 - 여전히 미배정인 1·2학년 → 쉐어 시도 (bGroupOnly 제외)
   for(const stu of sorted) {
     if(globalAssigned.has(stu.id)) continue;
-    if(stu.grade>2||!isAfternoonOnly(stu)) continue;
-    if(detail.gdamter.length<GD_CAP) {
-      detail.gdamter.push({...stu, seatNum:detail.gdamter.length+1});
-      globalAssigned.add(stu.id);
-    } else if(detail.munhyangjeon.length<MH_CAP) {
-      detail.munhyangjeon.push({...stu, seatNum:detail.munhyangjeon.length+1});
-      globalAssigned.add(stu.id);
-    }
+    if(stu.grade===3) continue;
+    if(bGroupOnly.has(stu.id)) continue;   // 오후만 1·2학년은 B그룹 전용
+    if(addToYH(stu, true)) continue;
+    addToSC(stu, true);
   }
+
+  /* ── 3단계: B그룹 배정은 0단계에서 완료 ── */
+  // 오후만 신청한 1·2학년은 이미 0단계에서 꿈담터·문향전에 배정됨
 
   /* ── 최종 미배정 ── */
   const unassigned = valid.filter(s=>!globalAssigned.has(s.id)).map(s=>{
-    let reason='A·B그룹 전체 만석';
-    if(s.grade===3) reason='A그룹 전체 만석 (3학년·B그룹 불가)';
-    else if(!isAfternoonOnly(s)) reason='A그룹 전체 만석 · 야간 포함으로 B그룹 불가';
+    let reason='전체 만석';
+    if(bGroupOnly.has(s.id)) reason='꿈담터·문향전 만석 (오후만 신청 1·2학년)';
+    else if(s.grade===3) reason='A그룹 전체 만석 (3학년·B그룹 불가)';
+    else if(!isAfternoonOnly(s)) reason='A그룹 전체 만석 (야간 포함)';
     return {...s, reason};
   });
 
@@ -1104,6 +1127,7 @@ function renderResult({roomAssign, unassigned, valid, total, detail}) {
             ${gradeTag(s.grade)}
             <span style="font-size:11px;color:var(--accent2);margin-left:auto;font-family:'DM Mono',monospace;">${s.times}T</span>
             ${s.pref===sp.name?'<span style="font-size:10px;color:var(--green);font-weight:700;">✓선호</span>':'<span style="font-size:10px;color:var(--text3);">↪대체</span>'}
+            ${s.isShared?'<span style="font-size:10px;background:#FFF3DC;color:#D4870A;padding:1px 5px;border-radius:10px;font-weight:700;">⇌쉐어</span>':''}
           </div>`;
         });
       });
@@ -1131,6 +1155,7 @@ function renderResult({roomAssign, unassigned, valid, total, detail}) {
             ${gradeTag(s.grade)}
             <span style="font-size:11px;color:var(--accent2);margin-left:auto;font-family:'DM Mono',monospace;">${s.times}T</span>
             ${s.pref===sp.name?'<span style="font-size:10px;color:var(--green);font-weight:700;">✓선호</span>':'<span style="font-size:10px;color:var(--text3);">↪대체</span>'}
+            ${s.isShared?'<span style="font-size:10px;background:#FFF3DC;color:#D4870A;padding:1px 5px;border-radius:10px;font-weight:700;">⇌쉐어</span>':''}
           </div>`;
         });
       });
