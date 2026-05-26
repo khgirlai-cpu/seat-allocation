@@ -1784,62 +1784,38 @@ function resetAll() {
    좌석 배치도 렌더링
 ══════════════════════════════ */
 
-// 양현재 좌석 배치 — PDF 숫자 방향 그대로
-// PDF 왼→오른 읽기 기준으로 각 행 배치
-// 컬럼: [왼A, 왼B, 주1~주8, 오A, 오B]
+// 양현재 좌석 배치 — 이미지 1:1 재현
+// [왼A, 왼B, 주1~주8, 오A, 오B]
 const YH_LAYOUT = [
-  // ── 상단 구역 ──────────────────────────────────────────────
-  // Row01: 80(왼), 79(왼) | 1  2  3  4  5  6  7  8 | 9(오)
   [ 80,  79,   1,   2,   3,   4,   5,   6,   7,   8,   9, null],
-  // Row02: 81(왼)                                    10(오)
   [ 81, null,null,null,null,null,null,null,null,null,  10, null],
-  // Row03: 82(왼) | 21 20 19 18 17 16 15 14          11(오)
   [ 82, null,  21,  20,  19,  18,  17,  16,  15,  14,  11, null],
-  // Row04: 83(왼) | 22 23 24 25 26 27 28 29          12(오)
   [ 83, null,  22,  23,  24,  25,  26,  27,  28,  29,  12, null],
-  // Row05: 84(왼)                                    13(오)
   [ 84, null,null,null,null,null,null,null,null,null,  13, null],
-  // Row06: 85(왼)                                    30(오)
   [ 85, null,null,null,null,null,null,null,null,null,  30, null],
-
-  // ── 중단 구역 ──────────────────────────────────────────────
-  // Row07: | 39 38 37 36 35 34 33 32 | 31(오)
   [null,null,  39,  38,  37,  36,  35,  34,  33,  32,  31, null],
-  // Row08: 감독교사 | 40 41 42 43 44 45 46 47 | 48(오)
   ['T', null,  40,  41,  42,  43,  44,  45,  46,  47,  48, null],
-  // Row09:                                            49(오)
   [null,null,null,null,null,null,null,null,null,null,  49, null],
-  // Row10:                                            50(오)
   [null,null,null,null,null,null,null,null,null,null,  50, null],
-
-  // ── 하단 구역 ──────────────────────────────────────────────
-  // Row11: | 60 59 58 57 56 55 54 53 | 51(오)
   [null,null,  60,  59,  58,  57,  56,  55,  54,  53,  51, null],
-  // Row12: | 61 62 63 64 65 66 67 68 | 52(오)
   [null,null,  61,  62,  63,  64,  65,  66,  67,  68,  52, null],
-  // Row13:                                            69(오)
   [null,null,null,null,null,null,null,null,null,null,  69, null],
-  // Row14: | 78 77 76 75 74 73 72 71 | 70(오)
   [null,null,  78,  77,  76,  75,  74,  73,  72,  71,  70, null],
-  // Row15:                                            79(오)
-  [null,null,null,null,null,null,null,null,null,null,  79, null],
-  // Row16:                                            80(오)  ← 80은 왼쪽 상단에도 있고 여기도?
-  // PDF상 80은 왼쪽 맨 위에만 있음 → Row16 불필요
 ];
 
-// 스터디카페 좌석 배치 (PDF 기준)
+// 스터디카페 좌석 배치 (최종)
+// 오른쪽 창가 세로: 26~30번 일렬
 const SC_LAYOUT = [
-  // 야간 고정석 (1,3,5,7 - 각 2자리)
   ['SC_LABEL:고정석 (1~8번)'],
-  [1, 2, null, 3, 4, null, 5, 6, null, 7, 8],
-  ['SC_LABEL:쉐어존 (9~15번)'],
-  [9, 10, 11, 12, 13, 14, 15],
-  ['SC_LABEL:일반 (16~20번)'],
-  [16, 17, 18, 19, 20],
+  [1, 2, null, 3, 4, null, 5, 6, null, 7, 8, 'WIN', 26],
+  [null, null, null, null, null, null, null, null, null, null, null, 'WIN', 27],
+  ['SC_LABEL:쉐어존 (9~14번)'],
+  [14, 13, 12, 11, 10, 9, 'WIN', 28],
+  ['SC_LABEL:일반 (15~20번)'],
+  [15, 16, 17, 18, 19, 20, 'WIN', 29],
   ['SC_LABEL:단기 1~2일 (21~25번)'],
-  [21, 22, 23, 24, 25],
+  [25, 24, 23, 22, 21, 'WIN', 30],
 ];
-
 let currentMapRoom = 'yh';
 let mapSlotFilter = 'all';
 let tooltipEl = null;
@@ -1914,19 +1890,45 @@ function renderSeatMap() {
     html += `</div>`;
 
   } else {
-    // 스터디카페
+    // 스터디카페: 왼쪽 주구역 + 오른쪽 창가(26~30) 고정 컬럼
+    // SC_LAYOUT에서 WIN 이후 숫자를 창가 컬럼으로 분리
+    const scMainRows = []; // 주구역 행들
+    const scWindowSeats = [26,27,28,29,30]; // 창가 고정
+
+    // 주구역만 추출 (WIN 이전까지)
     layout.forEach(row=>{
-      if(row.length===1 && typeof row[0]==='string' && row[0].startsWith('SC_LABEL:')) {
-        html += `<div class="map-section-label">${row[0].replace('SC_LABEL:','')}</div>`;
+      if(row.length===1) { scMainRows.push(row); return; }
+      const winIdx = row.indexOf('WIN');
+      scMainRows.push(winIdx>=0 ? row.slice(0,winIdx) : row);
+    });
+
+    // 창가 구분선
+    const winBar = `<div style="width:8px;align-self:stretch;background:repeating-linear-gradient(180deg,#7EC8E3 0,#7EC8E3 5px,transparent 5px,transparent 10px);border-radius:2px;margin:0 6px;flex-shrink:0;"></div>`;
+
+    // 창가 컬럼 HTML (26~30 세로)
+    const winColHtml = scWindowSeats.map(n=>makeSeatCell(n,seatStudentMap)).join('');
+
+    html += `<div style="display:flex;align-items:flex-start;gap:0;">`;
+    // 왼쪽 주구역
+    html += `<div style="flex:1;">`;
+    scMainRows.forEach(row=>{
+      if(row.length===1 && typeof row[0]==='string') {
+        if(row[0].startsWith('SC_LABEL:'))
+          html += `<div class="map-section-label">${row[0].replace('SC_LABEL:','')}</div>`;
         return;
       }
       html += `<div class="seat-map-row" style="margin-bottom:4px;">`;
       row.forEach(cell=>{
-        if(cell===null) html += `<div style="width:12px;height:48px;flex-shrink:0;"></div>`;
+        if(cell===null) html += `<div style="width:14px;height:52px;flex-shrink:0;"></div>`;
         else html += makeSeatCell(cell, seatStudentMap);
       });
       html += `</div>`;
     });
+    html += `</div>`;
+    // 창가 구분선 + 26~30 세로 컬럼
+    html += winBar;
+    html += `<div style="display:flex;flex-direction:column;gap:4px;">${winColHtml}</div>`;
+    html += `</div>`;
   }
 
   html += `</div>`;
